@@ -3,6 +3,12 @@ package com.yeqian.travelagent.interfaces.controller;
 import com.yeqian.travelagent.application.dto.AiChatRequest;
 import com.yeqian.travelagent.application.dto.AiChatResponse;
 import com.yeqian.travelagent.application.service.AiChatService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -19,6 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping("/api/ai")
+@Tag(name = "AI 聊天", description = "用于验证模型配置和调试基础 AI 对话链路。")
 public class AiChatController {
 
     @Resource
@@ -31,6 +38,15 @@ public class AiChatController {
      * @return AI 聊天响应
      */
     @PostMapping("/chat")
+    @Operation(summary = "发送聊天消息", description = "向当前配置的 AI 模型发送一段文本消息，并返回模型回复或失败原因。")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "AI 调用成功",
+                    content = @Content(schema = @Schema(implementation = AiChatResponse.class))),
+            @ApiResponse(responseCode = "400", description = "AI 配置不可用或请求参数不合法",
+                    content = @Content(schema = @Schema(implementation = AiChatResponse.class))),
+            @ApiResponse(responseCode = "502", description = "上游 AI 服务调用失败",
+                    content = @Content(schema = @Schema(implementation = AiChatResponse.class)))
+    })
     public ResponseEntity<AiChatResponse> chat(@Valid @RequestBody AiChatRequest request) {
         try {
             return ResponseEntity.ok(AiChatResponse.success(aiChatService.chat(request.message())));

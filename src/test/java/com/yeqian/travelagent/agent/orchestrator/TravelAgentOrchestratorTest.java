@@ -10,6 +10,7 @@ import com.yeqian.travelagent.agent.planner.CandidatePlanGenerator;
 import com.yeqian.travelagent.agent.planner.ItineraryPlanner;
 import com.yeqian.travelagent.agent.planner.TravelTaskPlanner;
 import com.yeqian.travelagent.agent.scorer.TravelScorer;
+import com.yeqian.travelagent.agent.session.TravelSessionStore;
 import com.yeqian.travelagent.application.dto.TravelPlanRequest;
 import com.yeqian.travelagent.application.dto.TravelPlanResponse;
 import com.yeqian.travelagent.infrastructure.ai.JsonExtractor;
@@ -56,6 +57,39 @@ class TravelAgentOrchestratorTest {
     }
 
     /**
+     * 验证缺少出发地时返回会话编号，并且第二轮携带会话编号可以合并上下文继续生成完整计划。
+     */
+    @Test
+    void shouldMergeIntentBySessionIdForMultiTurnClarification() {
+        TravelAgentOrchestrator orchestrator = buildOrchestrator();
+
+        TravelPlanResponse firstResponse = orchestrator.plan(new TravelPlanRequest(
+                "五一想出去玩4天，两个人，预算3000，不想太累",
+                null
+        ));
+
+        assertThat(firstResponse.needClarification()).isTrue();
+        assertThat(firstResponse.sessionId()).isNotBlank();
+        assertThat(firstResponse.clarificationQuestions()).contains("你是从哪个城市出发？");
+        assertThat(firstResponse.structuredClarificationQuestions())
+                .extracting("field")
+                .contains("departureCity");
+
+        TravelPlanResponse secondResponse = orchestrator.plan(new TravelPlanRequest(
+                "我从西安出发，想去杭州上海周边",
+                firstResponse.sessionId()
+        ));
+
+        assertThat(secondResponse.needClarification()).isFalse();
+        assertThat(secondResponse.sessionId()).isEqualTo(firstResponse.sessionId());
+        assertThat(secondResponse.intent().departureCity()).isEqualTo("西安");
+        assertThat(secondResponse.intent().days()).isEqualTo(4);
+        assertThat(secondResponse.intent().peopleCount()).isEqualTo(2);
+        assertThat(secondResponse.intent().destinationPreferences()).contains("杭州");
+        assertThat(secondResponse.recommendedPlan()).isNotNull();
+    }
+
+    /**
      * 构造测试用编排器。
      *
      * @return 注入测试依赖后的编排器
@@ -72,6 +106,7 @@ class TravelAgentOrchestratorTest {
         ReflectionTestUtils.setField(orchestrator, "itineraryPlanner", new ItineraryPlanner());
         ReflectionTestUtils.setField(orchestrator, "reminderGenerator", new ReminderGenerator());
         ReflectionTestUtils.setField(orchestrator, "imageBriefGenerator", new ImageBriefGenerator());
+        ReflectionTestUtils.setField(orchestrator, "travelSessionStore", new TravelSessionStore());
         return orchestrator;
     }
 

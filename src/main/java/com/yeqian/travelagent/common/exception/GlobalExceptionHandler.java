@@ -32,12 +32,6 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * 处理未捕获系统异常。
-     *
-     * @param exception 系统异常
-     * @return 统一失败响应
-     */
-    /**
      * 处理资源不存在异常。
      *
      * @param exception 参数异常
@@ -49,6 +43,12 @@ public class GlobalExceptionHandler {
         return Result.failure(exception.getMessage());
     }
 
+    /**
+     * 处理未捕获系统异常。
+     *
+     * @param exception 系统异常
+     * @return 统一失败响应
+     */
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public Result<Void> handleException(Exception exception) {

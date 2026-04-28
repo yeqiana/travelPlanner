@@ -1,6 +1,7 @@
 package com.yeqian.travelagent.application.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
  * AI 聊天响应 DTO。
@@ -12,9 +13,13 @@ import com.fasterxml.jackson.annotation.JsonInclude;
  * @param message 错误信息
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
+@Schema(description = "AI 聊天响应")
 public record AiChatResponse(
+        @Schema(description = "AI 调用是否成功", example = "true")
         boolean success,
+        @Schema(description = "AI 返回内容，调用成功时返回", example = "杭州适合周末放松，可以安排西湖、灵隐寺和龙井村。")
         String data,
+        @Schema(description = "错误信息，调用失败时返回", example = "AI 调用失败：上游服务超时")
         String message
 ) {
 

@@ -38,6 +38,7 @@ class MissingInfoCheckerTest {
 
         assertThat(result.needClarification()).isFalse();
         assertThat(result.clarificationQuestions()).isEmpty();
+        assertThat(result.structuredClarificationQuestions()).isEmpty();
     }
 
     /**
@@ -62,6 +63,9 @@ class MissingInfoCheckerTest {
 
         assertThat(result.needClarification()).isTrue();
         assertThat(result.clarificationQuestions()).containsExactly("你是从哪个城市出发？");
+        assertThat(result.structuredClarificationQuestions())
+                .extracting("field")
+                .containsExactly("departureCity");
     }
 
     /**
@@ -86,6 +90,9 @@ class MissingInfoCheckerTest {
 
         assertThat(result.needClarification()).isTrue();
         assertThat(result.clarificationQuestions()).containsExactly("计划出行几天？");
+        assertThat(result.structuredClarificationQuestions())
+                .extracting("field")
+                .containsExactly("days");
     }
 
     /**
@@ -109,6 +116,29 @@ class MissingInfoCheckerTest {
         MissingInfoCheckResult result = checker.check(intent);
 
         assertThat(intent.peopleCount()).isEqualTo(1);
+        assertThat(result.needClarification()).isFalse();
+    }
+
+    /**
+     * 验证缺少预算不会阻断规划流程。
+     */
+    @Test
+    void shouldNotAskClarificationWhenBudgetMissing() {
+        TravelIntent intent = new TravelIntent(
+                "西安",
+                "五一",
+                4,
+                2,
+                null,
+                List.of("杭州"),
+                List.of(),
+                null,
+                null,
+                List.of()
+        );
+
+        MissingInfoCheckResult result = checker.check(intent);
+
         assertThat(result.needClarification()).isFalse();
     }
 }

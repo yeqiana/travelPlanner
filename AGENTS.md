@@ -74,3 +74,24 @@ docs: 文档改动内容
 
 项目名称
 ```
+## OpenAPI / Swagger 文档规则
+
+### 总原则
+
+- 项目需要集成 OpenAPI / Swagger，用于前后端联调、接口自测、AI 辅助理解接口契约。
+- Swagger 文档描述的是 **API 契约**，不是数据库表说明书。
+- 不要为了生成文档而大规模污染业务代码。
+- 不要把数据库 Entity 当作对外 API 文档模型。
+- 对外接口应优先使用 Request DTO / Response DTO / VO 作为 Swagger 文档承载对象。
+
+### 集成要求
+
+- Spring Boot 项目优先使用 `springdoc-openapi`。
+- Spring Boot 3.x 优先使用：
+- API 文档优先描述 Controller、Request DTO、Response DTO 和错误响应；不要优先给数据库 Entity 批量添加 Swagger 注解。
+
+```xml
+<dependency>
+    <groupId>org.springdoc</groupId>
+    <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+</dependency>

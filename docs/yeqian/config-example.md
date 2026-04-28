@@ -56,16 +56,16 @@ spring:
     # 本地开发数据库连接地址。请按本机数据库名称、端口和参数调整。
     url: jdbc:mysql://localhost:3306/travel_planner_dev?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
     # 本地开发数据库用户名。
-    username: root
+    username: ${SPRING_DATASOURCE_USERNAME}
     # 本地开发数据库密码。仅作为示例，真实密码不要提交到仓库。
-    password: root
+    password: ${SPRING_DATASOURCE_PASSWORD}
     # JDBC 驱动类名。使用其他数据库时需要对应替换。
     driver-class-name: com.mysql.cj.jdbc.Driver
 
 logging:
   level:
     # 开发环境打开项目包 DEBUG，便于排查问题。
-    com.yeqian.travelplanner: DEBUG
+    com.yeqian.travelagent: DEBUG
 ```
 
 ## application-prod.yml 示例
@@ -83,7 +83,7 @@ spring:
 
 logging:
   level:
-    com.yeqian.travelplanner: INFO
+    com.yeqian.travelagent: INFO
 
 travel-planner:
   ai:
