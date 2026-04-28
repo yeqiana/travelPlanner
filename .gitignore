@@ -1,0 +1,19 @@
+# Maven
+target/
+
+# IDE
+.idea/
+*.iml
+
+# Local runtime configuration
+.mcp.json
+src/main/resources/application-dev.yml
+src/main/resources/application-prod.yml
+
+# Logs
+logs/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db

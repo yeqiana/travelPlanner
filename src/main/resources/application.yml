@@ -1,0 +1,44 @@
+# 当前项目默认启用开发环境配置。
+spring:
+  profiles:
+    active: dev
+  application:
+    name: travel-planner
+  jackson:
+    # 接口返回时间的时区，避免前后端时间显示不一致。
+    time-zone: Asia/Shanghai
+    # 日期时间序列化格式。
+    date-format: yyyy-MM-dd HH:mm:ss
+logging:
+  level:
+    # Spring 框架日志级别。公共默认值保持收敛，环境配置可按需覆盖。
+    org.springframework: WARN
+
+travel-planner:
+  # 行程规划公共业务配置。环境差异项可在 application-dev.yml / application-prod.yml 中覆盖。
+  trip:
+    # 默认行程天数。用户未指定天数时使用该值。
+    default-days: 3
+    # 单次规划允许的最大天数，防止请求过大影响响应时间。
+    max-days: 30
+  ai:
+    # 是否启用 AI 行程生成能力。未接入模型服务时可关闭。
+    enabled: false
+    # 模型服务地址。生产环境建议通过环境变量覆盖。
+    base-url: http://localhost:11434
+    # 默认模型名称，请按实际接入模型调整。
+    model: qwen2.5
+
+travel-agent:
+  external-api:
+    weather:
+      # OpenWeatherMap API Key，必须通过环境变量注入。
+      api-key: ${WEATHER_API_KEY:}
+      base-url: https://api.openweathermap.org
+      timeout-millis: 3000
+    search:
+      # Tavily API Key，必须通过环境变量注入。
+      api-key: ${SEARCH_API_KEY:}
+      base-url: https://api.tavily.com
+      timeout-millis: 5000
+      max-results: 5
