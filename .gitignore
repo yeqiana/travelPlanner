@@ -1,9 +1,16 @@
 # Maven
 target/
+*.class
+*.jar
+*.war
+*.nar
+*.ear
 
 # IDE
 .idea/
 *.iml
+.mtj.tmp/
+*.ctxt
 
 # Local runtime configuration
 .mcp.json
@@ -13,6 +20,8 @@ src/main/resources/application-prod.yml
 # Logs
 logs/
 *.log
+hs_err_pid*
+replay_pid*
 
 # OS
 .DS_Store
