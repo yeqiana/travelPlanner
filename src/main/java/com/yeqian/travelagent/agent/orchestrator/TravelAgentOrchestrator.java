@@ -81,6 +81,7 @@ public class TravelAgentOrchestrator {
      */
     public TravelPlanResponse plan(TravelPlanRequest request) {
         TravelSessionContext sessionContext = travelSessionStore.findBySessionId(request.sessionId());
+        // 解析旅行需求文本
         TravelIntent currentIntent = travelIntentParser.parse(request.message());
         TravelIntent intent = mergeIntent(sessionContext == null ? null : sessionContext.partialIntent(), currentIntent);
         String activeSessionId = sessionContext == null ? request.sessionId() : sessionContext.sessionId();

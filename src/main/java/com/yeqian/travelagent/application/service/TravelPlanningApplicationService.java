@@ -28,6 +28,7 @@ public class TravelPlanningApplicationService {
      */
     public TravelPlanResponse plan(TravelPlanRequest request) {
         TravelPlanResponse response = travelAgentOrchestrator.plan(request);
+        // 是否需要用户补充旅行信息
         if (response.needClarification()) {
             return response;
         }
