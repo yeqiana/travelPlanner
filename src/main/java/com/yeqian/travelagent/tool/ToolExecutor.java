@@ -3,6 +3,7 @@ package com.yeqian.travelagent.tool;
 import com.yeqian.travelagent.domain.model.ToolResult;
 import com.yeqian.travelagent.domain.model.TravelTask;
 import jakarta.annotation.Resource;
+import org.springframework.core.annotation.AnnotationAwareOrderComparator;
 import org.springframework.stereotype.Component;
 
 import java.time.OffsetDateTime;
@@ -40,7 +41,10 @@ public class ToolExecutor {
      * @return 工具调用结果
      */
     private ToolResult executeOne(TravelTask task) {
-        Optional<TravelTool> toolOptional = travelTools.stream()
+        List<TravelTool> orderedTools = travelTools.stream()
+                .sorted(AnnotationAwareOrderComparator.INSTANCE)
+                .toList();
+        Optional<TravelTool> toolOptional = orderedTools.stream()
                 .filter(tool -> tool.supports(task.taskType()))
                 .findFirst();
         if (toolOptional.isEmpty()) {

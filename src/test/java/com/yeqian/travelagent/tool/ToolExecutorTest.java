@@ -3,6 +3,9 @@ package com.yeqian.travelagent.tool;
 import com.yeqian.travelagent.domain.enums.TravelTaskType;
 import com.yeqian.travelagent.domain.model.ToolResult;
 import com.yeqian.travelagent.domain.model.TravelTask;
+import com.yeqian.travelagent.infrastructure.client.MapApiClient;
+import com.yeqian.travelagent.infrastructure.config.TravelAgentProperties;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -76,6 +79,25 @@ class ToolExecutorTest {
         assertThat(results.get(0).errorMessage()).contains("mock 工具异常");
         assertThat(results.get(1).success()).isTrue();
         assertThat(results.get(1).source()).isEqualTo("MockHotelSearchTool");
+    }
+
+    /**
+     * 验证多个工具同时支持路线任务时，真实地图路线工具优先于 mock 路线工具。
+     */
+    @Test
+    void shouldPreferMapRouteToolWhenMultipleRouteToolsSupportRoute() {
+        MapRouteTool mapRouteTool = new MapRouteTool();
+        MapApiClient mapApiClient = new MapApiClient();
+        ReflectionTestUtils.setField(mapApiClient, "travelAgentProperties", new TravelAgentProperties());
+        ReflectionTestUtils.setField(mapApiClient, "objectMapper", new ObjectMapper());
+        ReflectionTestUtils.setField(mapRouteTool, "mapApiClient", mapApiClient);
+        ReflectionTestUtils.setField(mapRouteTool, "mockRouteTool", new MockRouteTool());
+        ReflectionTestUtils.setField(mapRouteTool, "objectMapper", new ObjectMapper().findAndRegisterModules());
+        ToolExecutor executor = toolExecutorWith(List.of(new MockRouteTool(), mapRouteTool));
+
+        ToolResult result = executor.execute(List.of(task(TravelTaskType.ROUTE))).get(0);
+
+        assertThat(result.source()).contains("MapRouteTool").contains("MockRouteTool");
     }
 
     /**

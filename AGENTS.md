@@ -95,3 +95,22 @@ docs: 文档改动内容
     <groupId>org.springdoc</groupId>
     <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
 </dependency>
+
+## 文档沉淀规则
+
+当出现以下情况时，必须评估是否新增或更新 docs 文档：
+
+1. 新增跨模块复用的字段规范、状态枚举、接口契约。
+2. 新增会影响多个模块的业务规则或评分规则。
+3. 新增需要在后续批次继续复用的工程约定。
+4. 新增失败降级、fallback、兼容策略等非直观规则。
+5. 同一概念在对话中被反复解释两次及以上。
+
+原则：
+- 先沉淀规范，再继续扩展实现。
+- 文档应优先落在 docs/yeqian/ 或 docs/architecture/ 下。
+- 文档命名应明确表达主题，如：
+  - *-spec.md
+  - *-contract.md
+  - *-rules.md
+  - *-acceptance.md

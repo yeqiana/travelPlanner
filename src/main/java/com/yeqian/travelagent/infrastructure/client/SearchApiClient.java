@@ -51,6 +51,35 @@ public class SearchApiClient {
     }
 
     /**
+     * 搜索景点开放、预约、门票和节假日风险信息。
+     *
+     * @param city 城市名称
+     * @param query 搜索关键词
+     * @return 搜索接口原始响应
+     */
+    public String searchAttractionInfo(String city, String query) {
+        TravelAgentProperties.Search config = travelAgentProperties.getExternalApi().getSearch();
+        String apiKey = config.getApiKey();
+        if (apiKey == null || apiKey.isBlank()) {
+            throw new IllegalStateException("未配置搜索 API Key");
+        }
+        String normalizedQuery = ((city == null ? "" : city + " ") + (query == null ? "" : query)
+                + " 景点 开放时间 预约 门票 官方 文旅局").trim();
+        String response = restClient(config.getBaseUrl(), config.getTimeoutMillis())
+                .post()
+                .uri("/search")
+                .headers(headers -> headers.setBearerAuth(apiKey))
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(attractionRequestBody(normalizedQuery))
+                .retrieve()
+                .body(String.class);
+        if (response == null || response.isBlank()) {
+            throw new IllegalStateException("搜索 API 返回为空");
+        }
+        return response;
+    }
+
+    /**
      * 构造搜索请求体。
      *
      * @param query 搜索关键词
@@ -63,6 +92,22 @@ public class SearchApiClient {
         body.put("search_depth", "basic");
         body.put("include_answer", true);
         body.put("max_results", Math.max(maxResults, 1));
+        return body;
+    }
+
+    /**
+     * 构造景点信息搜索请求体。
+     *
+     * @param query 搜索关键词
+     * @return 搜索请求体
+     */
+    private Map<String, Object> attractionRequestBody(String query) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("query", query);
+        body.put("search_depth", "basic");
+        body.put("include_answer", true);
+        body.put("include_raw_content", false);
+        body.put("max_results", 5);
         return body;
     }
 

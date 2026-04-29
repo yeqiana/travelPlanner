@@ -42,3 +42,7 @@ travel-agent:
       base-url: ${SEARCH_BASE_URL}
       timeout-millis: ${SEARCH_TIMEOUT_MILLIS}
       max-results: ${SEARCH_MAX_RESULTS}
+    amap:
+      api-key: ${AMAP_API_KEY}
+      base-url: ${AMAP_BASE_URL}
+      timeout-millis: ${AMAP_TIMEOUT_MILLIS}

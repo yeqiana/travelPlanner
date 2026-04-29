@@ -206,6 +206,7 @@ public class TravelAgentProperties {
     public static class ExternalApi {
         private Weather weather = new Weather();
         private Search search = new Search();
+        private Amap amap = new Amap();
 
         /**
          * 获取天气 API 配置。
@@ -241,6 +242,24 @@ public class TravelAgentProperties {
          */
         public void setSearch(Search search) {
             this.search = search;
+        }
+
+        /**
+         * 获取高德地图 API 配置。
+         *
+         * @return 高德地图 API 配置
+         */
+        public Amap getAmap() {
+            return amap;
+        }
+
+        /**
+         * 设置高德地图 API 配置。
+         *
+         * @param amap 高德地图 API 配置
+         */
+        public void setAmap(Amap amap) {
+            this.amap = amap;
         }
     }
 
@@ -390,6 +409,71 @@ public class TravelAgentProperties {
          */
         public void setMaxResults(int maxResults) {
             this.maxResults = maxResults;
+        }
+    }
+
+    /**
+     * 高德地图 API 配置。
+     *
+     * <p>用于路线查询和地理编码，密钥必须通过环境变量注入。</p>
+     */
+    public static class Amap {
+        private String apiKey = "";
+        private String baseUrl = "https://restapi.amap.com";
+        private int timeoutMillis = 3000;
+
+        /**
+         * 获取高德地图 API Key。
+         *
+         * @return 高德地图 API Key
+         */
+        public String getApiKey() {
+            return apiKey;
+        }
+
+        /**
+         * 设置高德地图 API Key。
+         *
+         * @param apiKey 高德地图 API Key
+         */
+        public void setApiKey(String apiKey) {
+            this.apiKey = apiKey;
+        }
+
+        /**
+         * 获取高德地图 API 基础地址。
+         *
+         * @return 高德地图 API 基础地址
+         */
+        public String getBaseUrl() {
+            return baseUrl;
+        }
+
+        /**
+         * 设置高德地图 API 基础地址。
+         *
+         * @param baseUrl 高德地图 API 基础地址
+         */
+        public void setBaseUrl(String baseUrl) {
+            this.baseUrl = baseUrl;
+        }
+
+        /**
+         * 获取高德地图 API 超时时间。
+         *
+         * @return 超时时间，单位毫秒
+         */
+        public int getTimeoutMillis() {
+            return timeoutMillis;
+        }
+
+        /**
+         * 设置高德地图 API 超时时间。
+         *
+         * @param timeoutMillis 超时时间，单位毫秒
+         */
+        public void setTimeoutMillis(int timeoutMillis) {
+            this.timeoutMillis = timeoutMillis;
         }
     }
 }
