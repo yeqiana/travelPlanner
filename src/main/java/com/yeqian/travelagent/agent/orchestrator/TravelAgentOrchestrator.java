@@ -110,7 +110,7 @@ public class TravelAgentOrchestrator {
         List<TravelCandidatePlan> candidatePlans = candidatePlanGenerator.generate(intent, evidences);
         List<ScoredTravelPlan> scoredPlans = travelScorer.score(candidatePlans, intent, evidences);
         TravelPlan recommendedPlan = itineraryPlanner.generate(intent, scoredPlans, evidences);
-        List<TravelReminder> reminders = reminderGenerator.generate(intent, recommendedPlan);
+        List<TravelReminder> reminders = reminderGenerator.generate(intent, recommendedPlan, evidences);
         ImageBrief imageBrief = imageBriefGenerator.generate(recommendedPlan);
         return TravelPlanResponse.completed(activeSessionId, intent, tasks, toolResults, evidences, candidatePlans, scoredPlans, recommendedPlan, reminders, imageBrief);
     }

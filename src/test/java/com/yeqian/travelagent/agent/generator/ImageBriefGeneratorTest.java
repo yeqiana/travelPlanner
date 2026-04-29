@@ -29,6 +29,11 @@ class ImageBriefGeneratorTest {
         assertThat(brief.sections()).hasSize(4);
         assertThat(brief.sections()).extracting(section -> section.title())
                 .contains("路线", "每日安排", "提醒清单", "风险提示");
+        assertThat(brief.routeLine()).containsExactly("西安", "杭州", "西安");
+        assertThat(brief.dayCards()).isNotEmpty();
+        assertThat(brief.riskTags()).contains("节假日人流风险");
+        assertThat(brief.reminderCards()).isNotEmpty();
+        assertThat(brief.footerNote()).contains("官方平台");
     }
 
     /**

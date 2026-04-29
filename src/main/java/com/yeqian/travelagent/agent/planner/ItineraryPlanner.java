@@ -1,5 +1,6 @@
 package com.yeqian.travelagent.agent.planner;
 
+import com.yeqian.travelagent.domain.enums.EvidenceType;
 import com.yeqian.travelagent.domain.enums.FatigueLevel;
 import com.yeqian.travelagent.domain.model.DailyPlan;
 import com.yeqian.travelagent.domain.model.ScoredTravelPlan;
@@ -40,12 +41,12 @@ public class ItineraryPlanner {
                 best.candidatePlan().name() + " " + days + "天旅行计划",
                 buildSummary(intent, best),
                 route,
-                buildDailyPlans(days, travelCities),
-                buildTransportSuggestions(intent, route),
+                buildDailyPlans(days, travelCities, evidences),
+                buildTransportSuggestions(intent, route, evidences),
                 buildHotelSuggestions(intent, travelCities),
                 buildBudgetEstimate(intent, route, travelCities, days),
-                buildRisks(),
-                buildTodoList()
+                buildRisks(evidences),
+                buildTodoList(evidences)
         );
     }
 
@@ -130,20 +131,22 @@ public class ItineraryPlanner {
      * @param travelCities 游玩城市列表
      * @return 每日计划列表
      */
-    private List<DailyPlan> buildDailyPlans(int days, List<String> travelCities) {
+    private List<DailyPlan> buildDailyPlans(int days, List<String> travelCities, List<TravelEvidence> evidences) {
         List<DailyPlan> dailyPlans = new ArrayList<>();
         for (int day = 1; day <= days; day++) {
             String city = travelCities.get(Math.min(day - 1, travelCities.size() - 1));
             boolean firstDay = day == 1;
             boolean lastDay = day == days;
+            TravelEvidence attraction = firstAttractionEvidence(city, evidences);
+            String attractionName = attractionName(attraction, city);
             dailyPlans.add(new DailyPlan(
                     day,
                     city,
                     firstDay ? "抵达" + city + "，办理入住或寄存行李" : city + "核心景点游览",
-                    lastDay ? "预留返程交通和退房时间" : city + "热门景点或街区深度游",
+                    lastDay ? "预留返程交通和退房时间" : attractionName + "游览",
                     lastDay ? "返程或轻松收尾" : "安排本地餐食和夜间轻量活动",
                     fatigueLevel(day, days),
-                    notes(day, firstDay, lastDay)
+                    notes(day, firstDay, lastDay, attraction)
             ));
         }
         return dailyPlans;
@@ -171,7 +174,7 @@ public class ItineraryPlanner {
      * @param lastDay 是否最后一天
      * @return 注意事项列表
      */
-    private List<String> notes(int day, boolean firstDay, boolean lastDay) {
+    private List<String> notes(int day, boolean firstDay, boolean lastDay, TravelEvidence attraction) {
         List<String> notes = new ArrayList<>();
         if (firstDay) {
             notes.add("第一天降低强度，避免到达后赶景点。");
@@ -181,7 +184,28 @@ public class ItineraryPlanner {
         if (lastDay) {
             notes.add("最后一天预留返程缓冲，避免交通延误影响行程。");
         }
-        notes.add("Day " + day + " 的具体开放时间和门票以官方平台为准。");
+        if (attraction != null) {
+            Map<String, Object> facts = attraction.keyFacts();
+            String openTime = textFact(facts, "openTime");
+            String ticketInfo = textFact(facts, "ticketInfo");
+            if (!isBlank(openTime)) {
+                notes.add("开放时间：" + confirmText(openTime) + "。");
+            }
+            if (!isBlank(ticketInfo)) {
+                notes.add("门票信息：" + confirmText(ticketInfo) + "。");
+            }
+            if (boolFact(facts, "reservationRequired")) {
+                notes.add("该景点建议提前预约。");
+            }
+            if ("HIGH".equalsIgnoreCase(textFact(facts, "holidayRisk"))) {
+                notes.add("节假日人流风险较高，建议错峰并预留排队时间。");
+            }
+            if (boolFact(facts, "needSecondConfirm") || boolFact(facts, "fallback") || !isBlank(textFact(facts, "failureReason"))) {
+                notes.add("该景点信息存在不确定性，开放、预约和门票以官方平台为准。");
+            }
+        } else {
+            notes.add("Day " + day + " 的具体开放时间和门票以官方平台为准。");
+        }
         return notes;
     }
 
@@ -192,13 +216,23 @@ public class ItineraryPlanner {
      * @param route 完整路线
      * @return 交通建议列表
      */
-    private List<String> buildTransportSuggestions(TravelIntent intent, List<String> route) {
+    private List<String> buildTransportSuggestions(TravelIntent intent, List<String> route, List<TravelEvidence> evidences) {
         String preference = isBlank(intent.transportPreference()) ? "高铁/飞机按总耗时和价格择优" : intent.transportPreference();
-        return List.of(
-                "路线顺序：" + String.join(" -> ", route),
-                "交通偏好：" + preference + "。",
-                "跨城车次、航班余票和价格需在购票平台二次确认。"
-        );
+        List<String> suggestions = new ArrayList<>();
+        suggestions.add("路线顺序：" + String.join(" -> ", route));
+        suggestions.add("交通偏好：" + preference + "。");
+        for (TravelEvidence routeEvidence : routeEvidences(evidences)) {
+            Map<String, Object> facts = routeEvidence.keyFacts();
+            String transferSuggestion = textFact(facts, "transferSuggestion");
+            if (!isBlank(transferSuggestion)) {
+                suggestions.add("路线建议：" + transferSuggestion + "。");
+            }
+            if (boolFact(facts, "needSecondConfirm") || boolFact(facts, "fallback") || "HIGH".equalsIgnoreCase(textFact(facts, "routeRisk"))) {
+                suggestions.add("该路线需二次确认交通时间、班次和换乘安排。");
+            }
+        }
+        suggestions.add("跨城车次、航班余票和价格需在购票平台二次确认。");
+        return suggestions.stream().distinct().toList();
     }
 
     /**
@@ -247,12 +281,26 @@ public class ItineraryPlanner {
      *
      * @return 风险提示列表
      */
-    private List<String> buildRisks() {
-        return List.of(
-                "车票/酒店价格需二次确认。",
-                "景点预约需二次确认。",
-                "节假日人流风险较高，热门景区建议提前预约并预留排队时间。"
-        );
+    private List<String> buildRisks(List<TravelEvidence> evidences) {
+        List<String> risks = new ArrayList<>();
+        risks.add("车票/酒店价格需二次确认。");
+        risks.add("景点预约需二次确认。");
+        for (TravelEvidence evidence : safeEvidences(evidences)) {
+            Map<String, Object> facts = evidence.keyFacts();
+            if (evidence.evidenceType() == EvidenceType.ATTRACTION && boolFact(facts, "reservationRequired")) {
+                risks.add("景点“" + attractionName(evidence, "热门景点") + "”建议提前预约。");
+            }
+            if ("HIGH".equalsIgnoreCase(textFact(facts, "holidayRisk"))) {
+                risks.add("节假日人流风险较高，热门景区建议提前预约并预留排队时间。");
+            }
+            if (evidence.evidenceType() == EvidenceType.ROUTE && "HIGH".equalsIgnoreCase(textFact(facts, "routeRisk"))) {
+                risks.add("路线风险较高，需二次确认交通方案。");
+            }
+            if (boolFact(facts, "needSecondConfirm") || boolFact(facts, "fallback") || !isBlank(textFact(facts, "failureReason"))) {
+                risks.add(evidence.title() + " 信息需二次确认。");
+            }
+        }
+        return risks.stream().distinct().toList();
     }
 
     /**
@@ -260,13 +308,112 @@ public class ItineraryPlanner {
      *
      * @return 待办事项列表
      */
-    private List<String> buildTodoList() {
-        return List.of(
-                "确认往返和跨城车票/机票。",
-                "确认酒店价格、位置和取消政策。",
-                "确认热门景点预约、开放时间和入园规则。",
-                "出发前检查证件、充电器、雨具和常用药。"
-        );
+    private List<String> buildTodoList(List<TravelEvidence> evidences) {
+        List<String> todos = new ArrayList<>();
+        todos.add("确认往返和跨城车票/机票。");
+        todos.add("确认酒店价格、位置和取消政策。");
+        todos.add("确认热门景点预约、开放时间和入园规则。");
+        for (TravelEvidence evidence : safeEvidences(evidences)) {
+            Map<String, Object> facts = evidence.keyFacts();
+            if (evidence.evidenceType() == EvidenceType.ATTRACTION && boolFact(facts, "reservationRequired")) {
+                todos.add("提前预约“" + attractionName(evidence, "热门景点") + "”。");
+            }
+            if (evidence.evidenceType() == EvidenceType.ROUTE
+                    && ("HIGH".equalsIgnoreCase(textFact(facts, "routeRisk")) || boolFact(facts, "needSecondConfirm"))) {
+                todos.add("二次确认路线/交通时间、班次和换乘。");
+            }
+            if (textFact(facts, "ticketInfo").contains("需二次确认")) {
+                todos.add("完成票务/门票确认。");
+            }
+        }
+        todos.add("出发前检查证件、充电器、雨具和常用药。");
+        return todos.stream().distinct().toList();
+    }
+
+    /**
+     * 查找指定城市的景点证据。
+     *
+     * @param city 城市
+     * @param evidences 旅行证据列表
+     * @return 景点证据，不存在时返回 null
+     */
+    private TravelEvidence firstAttractionEvidence(String city, List<TravelEvidence> evidences) {
+        return safeEvidences(evidences).stream()
+                .filter(evidence -> evidence.evidenceType() == EvidenceType.ATTRACTION)
+                .filter(evidence -> city.equals(textFact(evidence.keyFacts(), "city")) || city.equals(evidence.city()))
+                .findFirst()
+                .orElse(null);
+    }
+
+    /**
+     * 获取路线证据列表。
+     *
+     * @param evidences 旅行证据列表
+     * @return 路线证据列表
+     */
+    private List<TravelEvidence> routeEvidences(List<TravelEvidence> evidences) {
+        return safeEvidences(evidences).stream()
+                .filter(evidence -> evidence.evidenceType() == EvidenceType.ROUTE)
+                .toList();
+    }
+
+    /**
+     * 获取景点名称。
+     *
+     * @param evidence 景点证据
+     * @param fallback 兜底名称
+     * @return 景点名称
+     */
+    private String attractionName(TravelEvidence evidence, String fallback) {
+        if (evidence == null) {
+            return fallback;
+        }
+        String name = textFact(evidence.keyFacts(), "attractionName");
+        return isBlank(name) ? fallback : name;
+    }
+
+    /**
+     * 将不确定文本转换为保守表达。
+     *
+     * @param value 原始文本
+     * @return 保守表达文本
+     */
+    private String confirmText(String value) {
+        return value.contains("需二次确认") ? "需二次确认，以官方平台为准" : value;
+    }
+
+    /**
+     * 获取安全证据列表。
+     *
+     * @param evidences 原始证据列表
+     * @return 安全证据列表
+     */
+    private List<TravelEvidence> safeEvidences(List<TravelEvidence> evidences) {
+        return evidences == null ? List.of() : evidences;
+    }
+
+    /**
+     * 获取文本事实。
+     *
+     * @param facts 关键事实
+     * @param key 字段名
+     * @return 文本事实
+     */
+    private String textFact(Map<String, Object> facts, String key) {
+        Object value = facts == null ? null : facts.get(key);
+        return value == null ? "" : String.valueOf(value);
+    }
+
+    /**
+     * 获取布尔事实。
+     *
+     * @param facts 关键事实
+     * @param key 字段名
+     * @return 布尔事实
+     */
+    private boolean boolFact(Map<String, Object> facts, String key) {
+        Object value = facts == null ? null : facts.get(key);
+        return value instanceof Boolean bool ? bool : Boolean.parseBoolean(String.valueOf(value));
     }
 
     /**

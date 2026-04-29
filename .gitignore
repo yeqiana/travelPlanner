@@ -14,7 +14,12 @@ target/
 
 # Local runtime configuration
 .mcp.json
+.env
+.env.*
+!.env.example
+*.local
 src/main/resources/application-dev.yml
+src/main/resources/application-local.yml
 src/main/resources/application-prod.yml
 
 # Logs

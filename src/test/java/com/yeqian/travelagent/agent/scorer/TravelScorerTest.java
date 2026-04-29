@@ -1,13 +1,17 @@
 package com.yeqian.travelagent.agent.scorer;
 
+import com.yeqian.travelagent.domain.enums.EvidenceType;
 import com.yeqian.travelagent.domain.model.ScoredTravelPlan;
 import com.yeqian.travelagent.domain.model.TravelCandidatePlan;
+import com.yeqian.travelagent.domain.model.TravelEvidence;
 import com.yeqian.travelagent.domain.model.TravelIntent;
 import com.yeqian.travelagent.domain.model.TravelScore;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -66,6 +70,65 @@ class TravelScorerTest {
     }
 
     /**
+     * 验证评分明细包含 6 个固定维度。
+     */
+    @Test
+    void shouldReturnSixScoreDetails() {
+        TravelCandidatePlan plan = new TravelCandidatePlan("杭州上海低疲劳", List.of("西安", "杭州", "上海", "西安"), "跨城较少。");
+
+        TravelScore score = scorer.score(List.of(plan), intent(BigDecimal.valueOf(10000), List.of()), List.of()).get(0).score();
+
+        assertThat(score.scoreDetails()).hasSize(6);
+        assertThat(score.scoreDetails()).extracting(detail -> detail.dimension())
+                .containsExactly("ROUTE_CONVENIENCE", "COST", "FATIGUE", "ATTRACTION_VALUE", "HOLIDAY_RISK", "WEATHER_TICKET_RISK");
+    }
+
+    /**
+     * 验证路线耗时过高时交通顺路分和疲劳分下降。
+     */
+    @Test
+    void shouldLowerRouteAndFatigueScoreWhenRouteDurationIsHigh() {
+        TravelCandidatePlan plan = new TravelCandidatePlan("杭州上海低疲劳", List.of("西安", "杭州", "上海", "西安"), "跨城较少。");
+        TravelScore normalScore = scorer.score(List.of(plan), intent(BigDecimal.valueOf(10000), List.of()), List.of(successRoute(120))).get(0).score();
+        TravelScore longRouteScore = scorer.score(List.of(plan), intent(BigDecimal.valueOf(10000), List.of()), List.of(successRoute(420))).get(0).score();
+
+        assertThat(longRouteScore.routeConvenienceScore()).isLessThan(normalScore.routeConvenienceScore());
+        assertThat(longRouteScore.fatigueScore()).isLessThan(normalScore.fatigueScore());
+    }
+
+    /**
+     * 验证五一遇到高节假日风险时节假日风险分下降。
+     */
+    @Test
+    void shouldLowerHolidayRiskScoreWhenHolidayRiskHighOnMayDay() {
+        TravelCandidatePlan plan = new TravelCandidatePlan("杭州上海低疲劳", List.of("西安", "杭州", "上海", "西安"), "跨城较少。");
+        TravelScore normalScore = scorer.score(List.of(plan), intent(BigDecimal.valueOf(10000), List.of()), List.of()).get(0).score();
+        TravelScore riskScore = scorer.score(List.of(plan), intent(BigDecimal.valueOf(10000), List.of()), List.of(attractionRisk())).get(0).score();
+
+        assertThat(riskScore.holidayRiskScore()).isLessThan(normalScore.holidayRiskScore());
+    }
+
+    /**
+     * 验证降级或失败证据不会产生确定性票价和余票结论。
+     */
+    @Test
+    void shouldKeepFallbackAndFailedEvidenceConservative() {
+        TravelCandidatePlan plan = new TravelCandidatePlan("杭州上海低疲劳", List.of("西安", "杭州", "上海", "西安"), "跨城较少。");
+        TravelEvidence failedEvidence = evidence(EvidenceType.ATTRACTION, "景点失败证据", "MockAttractionInfoTool", Map.of(
+                "ticketInfo", "需二次确认",
+                "sourceStatus", "FAILED",
+                "fallback", false,
+                "needSecondConfirm", true
+        ));
+
+        TravelScore score = scorer.score(List.of(plan), intent(BigDecimal.valueOf(10000), List.of()), List.of(failedEvidence)).get(0).score();
+
+        assertThat(score.scoreDetails()).anySatisfy(detail ->
+                assertThat(detail.reason()).contains("不把降级或失败证据当作确定余票或票价")
+        );
+    }
+
+    /**
      * 构造旅行意图。
      *
      * @param budget 总预算
@@ -100,5 +163,49 @@ class TravelScorerTest {
                 .findFirst()
                 .orElseThrow()
                 .score();
+    }
+
+    /**
+     * 构造成功路线证据。
+     *
+     * @param durationMinutes 路线耗时
+     * @return 路线证据
+     */
+    private TravelEvidence successRoute(int durationMinutes) {
+        return evidence(EvidenceType.ROUTE, "路线证据", "AMAP", Map.of(
+                "durationMinutes", durationMinutes,
+                "routeRisk", "LOW",
+                "sourceStatus", "SUCCESS",
+                "fallback", false,
+                "needSecondConfirm", false
+        ));
+    }
+
+    /**
+     * 构造高风险景点证据。
+     *
+     * @return 景点证据
+     */
+    private TravelEvidence attractionRisk() {
+        return evidence(EvidenceType.ATTRACTION, "景点证据", "OFFICIAL", Map.of(
+                "holidayRisk", "HIGH",
+                "reservationRequired", true,
+                "sourceStatus", "SUCCESS",
+                "fallback", false,
+                "needSecondConfirm", false
+        ));
+    }
+
+    /**
+     * 构造测试证据。
+     *
+     * @param evidenceType 证据类型
+     * @param title 标题
+     * @param source 来源
+     * @param facts 关键事实
+     * @return 旅行证据
+     */
+    private TravelEvidence evidence(EvidenceType evidenceType, String title, String source, Map<String, Object> facts) {
+        return new TravelEvidence(evidenceType, "杭州", title, "摘要", facts, 0.8, source, null, OffsetDateTime.now());
     }
 }

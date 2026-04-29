@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "mysql-travelplanner": {
+      "command": "npx",
+      "args": ["-y", "@matpb/mysql-mcp-server"],
+      "env": {
+        "MYSQL_HOST": "127.0.0.1",
+        "MYSQL_PORT": "3306",
+        "MYSQL_USER": "your_username",
+        "MYSQL_PASSWORD": "your_password",
+        "MYSQL_DATABASE": "travel_planner_dev",
+        "MYSQL_CONNECTION_LIMIT": "10",
+        "MYSQL_CONNECT_TIMEOUT": "60000",
+        "QUERY_TIMEOUT": "30000",
+        "MAX_ROWS": "1000"
+      }
+    }
+  }
+}
