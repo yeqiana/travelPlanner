@@ -40,6 +40,11 @@ travel-planner:
     base-url: http://localhost:11434
     # 默认模型名称，请按实际接入模型调整。
     model: qwen2.5
+
+travel-agent:
+  planning:
+    # 多轮追问 session 过期小时数。过期后不再恢复上下文，默认 24 小时。
+    session-ttl-hours: ${TRAVEL_SESSION_TTL_HOURS:24}
 ```
 
 ## application-dev.yml 示例
@@ -90,6 +95,10 @@ travel-planner:
     enabled: ${AI_ENABLED:false}
     base-url: ${AI_BASE_URL:http://localhost:11434}
     model: ${AI_MODEL:qwen2.5}
+
+travel-agent:
+  planning:
+    session-ttl-hours: ${TRAVEL_SESSION_TTL_HOURS:24}
 ```
 
 ## 环境变量示例
@@ -102,6 +111,7 @@ DB_PASSWORD=change-me
 AI_ENABLED=false
 AI_BASE_URL=http://localhost:11434
 AI_MODEL=qwen2.5
+TRAVEL_SESSION_TTL_HOURS=24
 ```
 
 ## 使用建议
@@ -110,5 +120,5 @@ AI_MODEL=qwen2.5
 - 当前默认使用 `dev`：`spring.profiles.active: dev`。
 - 生产环境使用环境变量覆盖敏感配置。
 - 不要提交真实数据库密码、API Key、Token 等敏感信息。
-- 新增业务配置时，建议统一放在 `travel-planner` 前缀下，后续可用配置类集中绑定。
+- 新增 Travel Agent 链路配置时，建议统一放在 `travel-agent` 前缀下，并同步更新 `TravelAgentProperties`。
 - 修改配置后至少启动一次应用，确认配置能被正常加载。

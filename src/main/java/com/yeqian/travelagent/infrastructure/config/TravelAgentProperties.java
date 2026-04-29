@@ -142,6 +142,7 @@ public class TravelAgentProperties {
         private int maxCandidatePlanCount = 3;
         private int maxDailyAttractionCount = 3;
         private int maxDailyCrossCityCount = 1;
+        private int sessionTtlHours = 24;
 
         /**
          * 获取最大候选方案数量。
@@ -195,6 +196,24 @@ public class TravelAgentProperties {
          */
         public void setMaxDailyCrossCityCount(int maxDailyCrossCityCount) {
             this.maxDailyCrossCityCount = maxDailyCrossCityCount;
+        }
+
+        /**
+         * 获取多轮追问会话过期小时数。
+         *
+         * @return 会话过期小时数
+         */
+        public int getSessionTtlHours() {
+            return sessionTtlHours;
+        }
+
+        /**
+         * 设置多轮追问会话过期小时数。
+         *
+         * @param sessionTtlHours 会话过期小时数
+         */
+        public void setSessionTtlHours(int sessionTtlHours) {
+            this.sessionTtlHours = sessionTtlHours;
         }
     }
 

@@ -154,3 +154,91 @@ curl -X POST "http://localhost:8080/api/ai/chat" `
 - 未实现 SSE 流式接口。
 - 未接真实票务下单、酒店预订、地图深度路线规划。
 - 数据库保存失败时主接口会失败，不会返回未落库的计划。
+
+## 5. 响应契约补充样例
+
+完整计划响应重点字段示例：
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "planId": "0b0fd5a2-3a25-43b6-9bfb-2cf3c6b79d11",
+    "sessionId": "session_demo",
+    "needClarification": false,
+    "clarificationQuestions": [],
+    "structuredClarificationQuestions": [],
+    "evidences": [
+      {
+        "evidenceType": "WEATHER",
+        "city": "杭州",
+        "title": "杭州 天气证据",
+        "summary": "杭州天气晴转多云，穿衣建议：按当季轻便衣物准备，出发前复查天气。",
+        "keyFacts": {
+          "sourceStatus": "SUCCESS",
+          "fallback": false,
+          "needSecondConfirm": false,
+          "confidence": 0.75,
+          "weatherSummary": "杭州天气晴转多云",
+          "temperatureRange": "需二次确认",
+          "dressingAdvice": "按当季轻便衣物准备，出发前复查天气",
+          "weatherRisk": "LOW"
+        }
+      },
+      {
+        "evidenceType": "TRANSPORT",
+        "city": "杭州",
+        "keyFacts": {
+          "transportMode": "高铁优先",
+          "durationText": "7小时",
+          "costRange": "600-900元",
+          "ticketRisk": "HIGH",
+          "needSecondConfirm": false
+        }
+      }
+    ],
+    "imageBrief": {
+      "title": "杭州 + 上海周边4天旅行计划",
+      "subtitle": "低疲劳节假日路线",
+      "sections": [
+        {
+          "title": "路线",
+          "content": "西安 -> 杭州 -> 上海周边 -> 西安"
+        }
+      ]
+    },
+    "risks": ["节假日人流和票务风险需提前确认"]
+  }
+}
+```
+
+追问响应示例：
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "planId": null,
+    "sessionId": "session_6f4f0b2e",
+    "needClarification": true,
+    "clarificationQuestions": ["你是从哪个城市出发？"],
+    "structuredClarificationQuestions": [
+      {
+        "field": "departureCity",
+        "question": "你是从哪个城市出发？",
+        "example": "例如：西安",
+        "required": true
+      }
+    ],
+    "intent": {
+      "departureCity": null,
+      "dateText": "五一",
+      "days": 4,
+      "peopleCount": 2,
+      "destinationPreferences": ["杭州"]
+    }
+  }
+}
+```

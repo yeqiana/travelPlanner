@@ -54,6 +54,38 @@ class TravelIntentParserTest {
     }
 
     /**
+     * 验证多段路线表达可以解析出出发地和多个目的地。
+     */
+    @Test
+    void shouldParseMultiCityRouteExpression() {
+        TravelIntent intent = parser().parse("西安到杭州再去上海玩4天，两个人，预算5000");
+
+        assertThat(intent.departureCity()).isEqualTo("西安");
+        assertThat(intent.destinationPreferences()).contains("杭州", "上海");
+    }
+
+    /**
+     * 验证模糊目的地表达可以保留区域偏好并补充代表城市。
+     */
+    @Test
+    void shouldParseFuzzyDestinationExpression() {
+        TravelIntent intent = parser().parse("五一从西安出发去江浙沪周边玩4天，两个人");
+
+        assertThat(intent.destinationPreferences()).contains("江浙沪周边", "杭州", "苏州", "上海周边");
+    }
+
+    /**
+     * 验证主题路线表达可以解析为目的地偏好。
+     */
+    @Test
+    void shouldParseLoopRouteExpression() {
+        TravelIntent intent = parser().parse("暑假从成都出发走川西小环线5天");
+
+        assertThat(intent.departureCity()).isEqualTo("成都");
+        assertThat(intent.destinationPreferences()).contains("川西小环线", "都江堰");
+    }
+
+    /**
      * 构造不接入模型的解析器，让测试稳定走规则兜底。
      *
      * @return 旅行意图解析器

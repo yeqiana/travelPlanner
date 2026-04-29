@@ -39,7 +39,64 @@ import java.util.List;
  * @param risks 风险提示列表
  * @param createdAt 响应创建时间
  */
-@Schema(description = "旅行计划响应")
+@Schema(description = "旅行计划响应", example = """
+        {
+          "planId": "0b0fd5a2-3a25-43b6-9bfb-2cf3c6b79d11",
+          "sessionId": "session_demo",
+          "needClarification": false,
+          "clarificationQuestions": [],
+          "structuredClarificationQuestions": [],
+          "intent": {
+            "departureCity": "西安",
+            "dateText": "五一",
+            "days": 4,
+            "peopleCount": 2,
+            "budget": 5000,
+            "destinationPreferences": ["杭州", "上海周边"],
+            "travelStyles": ["不想太累", "节假日"],
+            "transportPreference": null,
+            "hotelBudgetPerNight": null,
+            "avoidPlaces": []
+          },
+          "tasks": [],
+          "toolResults": [],
+          "evidences": [
+            {
+              "evidenceType": "WEATHER",
+              "city": "杭州",
+              "title": "杭州 天气证据",
+              "summary": "杭州天气晴转多云，穿衣建议：按当季轻便衣物准备，出发前复查天气。",
+              "keyFacts": {
+                "sourceStatus": "SUCCESS",
+                "needSecondConfirm": false,
+                "confidence": 0.75,
+                "weatherRisk": "LOW"
+              },
+              "confidence": 0.75,
+              "sourceName": "MockWeatherTool",
+              "sourceUrl": null,
+              "fetchedAt": "2026-04-29T10:00:00+08:00"
+            }
+          ],
+          "candidatePlans": [],
+          "scoredPlans": [],
+          "recommendedPlan": {
+            "title": "杭州 + 上海周边4天旅行计划",
+            "summary": "低疲劳节假日路线",
+            "route": ["西安", "杭州", "上海周边", "西安"],
+            "dailyPlans": []
+          },
+          "score": null,
+          "reminders": [],
+          "imageBrief": {
+            "title": "杭州 + 上海周边4天旅行计划",
+            "subtitle": "低疲劳节假日路线",
+            "sections": []
+          },
+          "risks": ["节假日人流和票务风险需提前确认"],
+          "createdAt": "2026-04-29T10:00:00+08:00"
+        }
+        """)
 public record TravelPlanResponse(
         @Schema(description = "计划编号。需要补充信息或尚未落库时可能为空", example = "plan-20260428-001", nullable = true)
         String planId,

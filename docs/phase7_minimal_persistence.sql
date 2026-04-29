@@ -2,6 +2,19 @@ CREATE DATABASE IF NOT EXISTS travel_planner_dev DEFAULT CHARACTER SET utf8mb4 C
 
 USE travel_planner_dev;
 
+CREATE TABLE IF NOT EXISTS travel_session (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '自增主键',
+    session_id VARCHAR(64) NOT NULL COMMENT '多轮追问会话编号',
+    status VARCHAR(32) NOT NULL COMMENT '会话状态：CLARIFYING 或 COMPLETED',
+    partial_intent_json LONGTEXT NULL COMMENT '已解析出的部分旅行意图JSON',
+    last_questions_json LONGTEXT NULL COMMENT '上一轮结构化追问问题JSON',
+    expires_at DATETIME NOT NULL COMMENT '会话过期时间',
+    created_at DATETIME NOT NULL COMMENT '创建时间',
+    updated_at DATETIME NOT NULL COMMENT '更新时间',
+    UNIQUE KEY uk_travel_session_session_id (session_id),
+    KEY idx_travel_session_status_expires_at (status, expires_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='旅行规划多轮追问会话表';
+
 CREATE TABLE IF NOT EXISTS travel_plan (
     id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '自增主键',
     plan_id VARCHAR(64) NOT NULL COMMENT '旅行规划业务编号',

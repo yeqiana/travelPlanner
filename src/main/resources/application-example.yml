@@ -32,6 +32,9 @@ logging:
     com.yeqian.travelagent: DEBUG
 
 travel-agent:
+  planning:
+    # 多轮追问会话过期小时数，默认 24 小时。
+    session-ttl-hours: ${TRAVEL_SESSION_TTL_HOURS:24}
   external-api:
     weather:
       api-key: ${WEATHER_API_KEY}

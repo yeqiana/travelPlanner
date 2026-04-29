@@ -38,6 +38,7 @@ class EvidenceNormalizerTest {
         assertThat(evidences.get(0).city()).isEqualTo("杭州");
         assertThat(evidences.get(0).summary()).contains("杭州天气");
         assertThat(evidences.get(0).keyFacts()).containsEntry("success", true);
+        assertThat(evidences.get(0).keyFacts()).containsKeys("weatherSummary", "temperatureRange", "dressingAdvice", "weatherRisk");
     }
 
     /**
@@ -53,6 +54,25 @@ class EvidenceNormalizerTest {
         assertThat(evidence.confidence()).isEqualTo(0.2);
         assertThat(evidence.summary()).contains("搜索接口超时");
         assertThat(evidence.keyFacts()).containsEntry("needSecondConfirm", true);
+        assertThat(evidence.keyFacts()).containsKeys("areaSuggestion", "budgetSuggestion", "transportConvenience", "priceReliability");
+    }
+
+    /**
+     * 验证交通工具结果会归一化出结构化票务风险。
+     */
+    @Test
+    void shouldNormalizeTransportKeyFacts() {
+        TravelTask task = new TravelTask(TravelTaskType.TRANSPORT, "西安到杭州交通", "杭州", 1);
+        ToolResult result = new ToolResult(TravelTaskType.TRANSPORT, "MockTransportSearchTool", true, "高铁约7小时，票价600-900元，五一票务紧张", null, OffsetDateTime.now());
+
+        TravelEvidence evidence = normalizer.normalize(List.of(result), List.of(task)).get(0);
+
+        assertThat(evidence.evidenceType()).isEqualTo(EvidenceType.TRANSPORT);
+        assertThat(evidence.keyFacts())
+                .containsEntry("transportMode", "高铁优先")
+                .containsEntry("durationText", "7小时")
+                .containsEntry("costRange", "600-900元")
+                .containsEntry("ticketRisk", "HIGH");
     }
 
     /**

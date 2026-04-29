@@ -7,6 +7,7 @@ import com.yeqian.travelagent.common.result.Result;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -43,7 +44,80 @@ public class TravelPlanController {
     @Operation(summary = "创建旅行计划", description = "根据用户自然语言旅行需求生成旅行计划；信息不足时返回澄清问题和会话编号。")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "创建成功或需要补充信息",
-                    content = @Content(schema = @Schema(implementation = Result.class))),
+                    content = @Content(
+                            schema = @Schema(implementation = Result.class),
+                            examples = {
+                                    @ExampleObject(name = "完整计划响应", value = """
+                                            {
+                                              "code": 0,
+                                              "message": "success",
+                                              "data": {
+                                                "planId": "0b0fd5a2-3a25-43b6-9bfb-2cf3c6b79d11",
+                                                "sessionId": "session_demo",
+                                                "needClarification": false,
+                                                "clarificationQuestions": [],
+                                                "structuredClarificationQuestions": [],
+                                                "intent": {
+                                                  "departureCity": "西安",
+                                                  "dateText": "五一",
+                                                  "days": 4,
+                                                  "peopleCount": 2,
+                                                  "budget": 5000,
+                                                  "destinationPreferences": ["杭州", "上海周边"],
+                                                  "travelStyles": ["不想太累", "节假日"]
+                                                },
+                                                "evidences": [
+                                                  {
+                                                    "evidenceType": "WEATHER",
+                                                    "city": "杭州",
+                                                    "keyFacts": {
+                                                      "sourceStatus": "SUCCESS",
+                                                      "weatherRisk": "LOW",
+                                                      "needSecondConfirm": false
+                                                    }
+                                                  }
+                                                ],
+                                                "recommendedPlan": {
+                                                  "title": "杭州 + 上海周边4天旅行计划",
+                                                  "route": ["西安", "杭州", "上海周边", "西安"],
+                                                  "dailyPlans": []
+                                                },
+                                                "imageBrief": {
+                                                  "title": "杭州 + 上海周边4天旅行计划",
+                                                  "sections": []
+                                                },
+                                                "risks": ["节假日人流和票务风险需提前确认"]
+                                              }
+                                            }
+                                            """),
+                                    @ExampleObject(name = "追问信息响应", value = """
+                                            {
+                                              "code": 0,
+                                              "message": "success",
+                                              "data": {
+                                                "planId": null,
+                                                "sessionId": "session_6f4f0b2e",
+                                                "needClarification": true,
+                                                "clarificationQuestions": ["你是从哪个城市出发？"],
+                                                "structuredClarificationQuestions": [
+                                                  {
+                                                    "field": "departureCity",
+                                                    "question": "你是从哪个城市出发？",
+                                                    "example": "例如：西安",
+                                                    "required": true
+                                                  }
+                                                ],
+                                                "intent": {
+                                                  "departureCity": null,
+                                                  "dateText": "五一",
+                                                  "days": 4,
+                                                  "peopleCount": 2,
+                                                  "destinationPreferences": ["杭州"]
+                                                }
+                                              }
+                                            }
+                                            """)
+                            })),
             @ApiResponse(responseCode = "400", description = "请求参数不合法",
                     content = @Content(schema = @Schema(implementation = Result.class))),
             @ApiResponse(responseCode = "500", description = "系统暂时无法生成旅行计划",

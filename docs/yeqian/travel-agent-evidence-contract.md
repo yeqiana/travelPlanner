@@ -47,6 +47,42 @@ ATTRACTION evidence 表示景点开放、预约、门票和节假日风险。
 | `confidence` | 置信度，范围建议 `0.0-1.0` | 低置信度信息不能强驱动结论 |
 | `failureReason` | 失败或降级原因 | 用于调试和风险说明 |
 
+## 3.1 WEATHER keyFacts
+
+WEATHER evidence 表示目的地天气、穿衣建议和天气风险。
+
+| 字段 | 含义 | 消费建议 |
+|---|---|---|
+| `weatherSummary` | 天气摘要或查询失败说明 | 行程和一图流展示天气提醒 |
+| `temperatureRange` | 温度范围，未知时为 `需二次确认` | 辅助穿衣提醒，不确定时不要写死温度 |
+| `dressingAdvice` | 穿衣和雨具建议 | 可进入提醒卡片 |
+| `weatherRisk` | 天气风险：`LOW`、`MEDIUM`、`HIGH` | 评分和风险标签可消费 |
+| `sourceStatus` / `fallback` / `needSecondConfirm` / `confidence` / `failureReason` | 通用来源状态字段 | 同 ROUTE / ATTRACTION 语义 |
+
+## 3.2 HOTEL keyFacts
+
+HOTEL evidence 表示住宿区域、预算和交通便利度。
+
+| 字段 | 含义 | 消费建议 |
+|---|---|---|
+| `areaSuggestion` | 推荐住宿区域或区域确认提醒 | 生成住宿建议，不代表真实库存 |
+| `budgetSuggestion` | 价格或预算参考，未知时为 `需二次确认` | 只做预算提示，不承诺实时价格 |
+| `transportConvenience` | 住宿区域交通便利度建议 | 影响行程便利性和提醒 |
+| `priceReliability` | 价格可信度，如 `REFERENCE`、`LOW` | 低可信度时文案必须保守 |
+| `sourceStatus` / `fallback` / `needSecondConfirm` / `confidence` / `failureReason` | 通用来源状态字段 | 同 ROUTE / ATTRACTION 语义 |
+
+## 3.3 TRANSPORT keyFacts
+
+TRANSPORT evidence 表示城际交通方式、耗时、费用和票务风险。
+
+| 字段 | 含义 | 消费建议 |
+|---|---|---|
+| `transportMode` | 交通方式建议，如高铁、飞机、自驾 | 候选方案和行程交通说明可消费 |
+| `durationText` | 耗时文本，未知时为 `需二次确认` | 不确定时不要写成确定耗时 |
+| `costRange` | 费用区间或价格文本 | 只做预算参考 |
+| `ticketRisk` | 票务风险：`LOW`、`MEDIUM`、`HIGH` | 生成抢票、候补和提前预订提醒 |
+| `sourceStatus` / `fallback` / `needSecondConfirm` / `confidence` / `failureReason` | 通用来源状态字段 | 同 ROUTE / ATTRACTION 语义 |
+
 ## 4. sourceStatus
 
 `sourceStatus` 描述 evidence 的来源状态。

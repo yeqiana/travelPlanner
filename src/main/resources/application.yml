@@ -39,6 +39,8 @@ travel-planner:
     model: ${TRAVEL_PLANNER_AI_MODEL:qwen2.5}
 
 travel-agent:
+  planning:
+    session-ttl-hours: ${TRAVEL_SESSION_TTL_HOURS:24}
   external-api:
     weather:
       api-key: ${WEATHER_API_KEY:}

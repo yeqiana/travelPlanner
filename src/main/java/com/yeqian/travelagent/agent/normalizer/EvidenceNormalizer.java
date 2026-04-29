@@ -68,6 +68,15 @@ public class EvidenceNormalizer {
         if (result.taskType() == TravelTaskType.ATTRACTION) {
             return normalizeAttraction(result, task);
         }
+        if (result.taskType() == TravelTaskType.WEATHER) {
+            return normalizeWeather(result, task);
+        }
+        if (result.taskType() == TravelTaskType.HOTEL) {
+            return normalizeHotel(result, task);
+        }
+        if (result.taskType() == TravelTaskType.TRANSPORT) {
+            return normalizeTransport(result, task);
+        }
         return normalizeGeneric(result, task);
     }
 
@@ -122,6 +131,54 @@ public class EvidenceNormalizer {
     }
 
     /**
+     * 归一化天气工具结果。
+     *
+     * @param result 工具调用结果
+     * @param task 查询任务
+     * @return 天气证据
+     */
+    private TravelEvidence normalizeWeather(ToolResult result, TravelTask task) {
+        Map<String, Object> keyFacts = baseFacts(result, task);
+        keyFacts.put("weatherSummary", result.success() ? defaultText(result.rawContent(), "天气信息需二次确认") : "天气信息查询失败");
+        keyFacts.put("temperatureRange", extractTemperatureRange(result.rawContent()));
+        keyFacts.put("dressingAdvice", weatherAdvice(result.rawContent(), result.success()));
+        keyFacts.put("weatherRisk", weatherRisk(result.rawContent(), result.success()));
+        return evidence(EvidenceType.WEATHER, task, weatherSummary(result, keyFacts), keyFacts, result);
+    }
+
+    /**
+     * 归一化住宿工具结果。
+     *
+     * @param result 工具调用结果
+     * @param task 查询任务
+     * @return 住宿证据
+     */
+    private TravelEvidence normalizeHotel(ToolResult result, TravelTask task) {
+        Map<String, Object> keyFacts = baseFacts(result, task);
+        keyFacts.put("areaSuggestion", task == null ? "住宿区域需二次确认" : cityText(task) + "交通便利区域优先");
+        keyFacts.put("budgetSuggestion", extractBudgetText(result.rawContent()));
+        keyFacts.put("transportConvenience", result.success() ? "优先选择地铁或核心景区通达区域" : "需二次确认住宿区域交通");
+        keyFacts.put("priceReliability", result.success() ? "REFERENCE" : "LOW");
+        return evidence(EvidenceType.HOTEL, task, hotelSummary(result, keyFacts), keyFacts, result);
+    }
+
+    /**
+     * 归一化交通票务工具结果。
+     *
+     * @param result 工具调用结果
+     * @param task 查询任务
+     * @return 交通证据
+     */
+    private TravelEvidence normalizeTransport(ToolResult result, TravelTask task) {
+        Map<String, Object> keyFacts = baseFacts(result, task);
+        keyFacts.put("transportMode", transportMode(result.rawContent()));
+        keyFacts.put("durationText", extractDurationText(result.rawContent()));
+        keyFacts.put("costRange", extractBudgetText(result.rawContent()));
+        keyFacts.put("ticketRisk", ticketRisk(result.rawContent(), result.success()));
+        return evidence(EvidenceType.TRANSPORT, task, transportSummary(result, keyFacts), keyFacts, result);
+    }
+
+    /**
      * 归一化通用工具结果。
      *
      * @param result 工具调用结果
@@ -130,11 +187,7 @@ public class EvidenceNormalizer {
      */
     private TravelEvidence normalizeGeneric(ToolResult result, TravelTask task) {
         EvidenceType evidenceType = EvidenceType.valueOf(result.taskType().name());
-        boolean needSecondConfirm = !result.success() || safeText(result.rawContent()).contains("二次确认");
-        Map<String, Object> keyFacts = new LinkedHashMap<>();
-        keyFacts.put("needSecondConfirm", needSecondConfirm);
-        keyFacts.put("success", result.success());
-        keyFacts.put("query", task == null ? "" : safeText(task.query()));
+        Map<String, Object> keyFacts = baseFacts(result, task);
         return new TravelEvidence(
                 evidenceType,
                 task == null ? null : task.city(),
@@ -146,6 +199,32 @@ public class EvidenceNormalizer {
                 null,
                 result.fetchedAt()
         );
+    }
+
+    /**
+     * 构造通用关键事实字段。
+     *
+     * @param result 工具调用结果
+     * @param task 查询任务
+     * @return 通用关键事实
+     */
+    private Map<String, Object> baseFacts(ToolResult result, TravelTask task) {
+        boolean needSecondConfirm = !result.success() || safeText(result.rawContent()).contains("二次确认");
+        Map<String, Object> keyFacts = new LinkedHashMap<>();
+        keyFacts.put("needSecondConfirm", needSecondConfirm);
+        keyFacts.put("success", result.success());
+        keyFacts.put("query", task == null ? "" : safeText(task.query()));
+        addStatusFacts(
+                keyFacts,
+                result.source(),
+                result.success() ? "SUCCESS" : "FAILED",
+                false,
+                needSecondConfirm,
+                result.success() ? 0.75 : 0.2,
+                result.success() ? "" : result.errorMessage(),
+                result
+        );
+        return keyFacts;
     }
 
     /**
@@ -321,6 +400,170 @@ public class EvidenceNormalizer {
                 defaultText((String) keyFacts.getOrDefault("sourceUrl", ""), null),
                 result.fetchedAt()
         );
+    }
+
+    /**
+     * 构造天气证据摘要。
+     *
+     * @param result 工具调用结果
+     * @param keyFacts 关键事实
+     * @return 天气证据摘要
+     */
+    private String weatherSummary(ToolResult result, Map<String, Object> keyFacts) {
+        if (!result.success()) {
+            return defaultText(result.errorMessage(), "天气信息查询失败，需二次确认。");
+        }
+        return keyFacts.get("weatherSummary") + "，穿衣建议：" + keyFacts.get("dressingAdvice") + "。";
+    }
+
+    /**
+     * 构造住宿证据摘要。
+     *
+     * @param result 工具调用结果
+     * @param keyFacts 关键事实
+     * @return 住宿证据摘要
+     */
+    private String hotelSummary(ToolResult result, Map<String, Object> keyFacts) {
+        if (!result.success()) {
+            return defaultText(result.errorMessage(), "住宿信息查询失败，需二次确认。");
+        }
+        return "住宿建议：" + keyFacts.get("areaSuggestion") + "，预算参考：" + keyFacts.get("budgetSuggestion") + "。";
+    }
+
+    /**
+     * 构造交通证据摘要。
+     *
+     * @param result 工具调用结果
+     * @param keyFacts 关键事实
+     * @return 交通证据摘要
+     */
+    private String transportSummary(ToolResult result, Map<String, Object> keyFacts) {
+        if (!result.success()) {
+            return defaultText(result.errorMessage(), "交通票务信息查询失败，需二次确认。");
+        }
+        return "交通建议：" + keyFacts.get("transportMode") + "，票务风险：" + keyFacts.get("ticketRisk") + "。";
+    }
+
+    /**
+     * 提取温度范围文本。
+     *
+     * @param rawContent 原始内容
+     * @return 温度范围文本
+     */
+    private String extractTemperatureRange(String rawContent) {
+        String text = safeText(rawContent);
+        java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("(-?\\d{1,2}\\s*[~\\-到至]\\s*-?\\d{1,2}\\s*℃?)").matcher(text);
+        return matcher.find() ? matcher.group(1).replace(" ", "") : "需二次确认";
+    }
+
+    /**
+     * 生成穿衣建议。
+     *
+     * @param rawContent 原始内容
+     * @param success 是否成功
+     * @return 穿衣建议
+     */
+    private String weatherAdvice(String rawContent, boolean success) {
+        if (!success) {
+            return "出发前复查天气并按季节备衣";
+        }
+        String text = safeText(rawContent);
+        if (text.contains("雨") || text.contains("阵雨")) {
+            return "携带雨具，鞋服以防滑快干为主";
+        }
+        if (text.contains("冷") || text.contains("降温")) {
+            return "准备外套并关注早晚温差";
+        }
+        if (text.contains("热") || text.contains("高温")) {
+            return "注意防晒补水，安排室内休息";
+        }
+        return "按当季轻便衣物准备，出发前复查天气";
+    }
+
+    /**
+     * 判断天气风险等级。
+     *
+     * @param rawContent 原始内容
+     * @param success 是否成功
+     * @return 天气风险等级
+     */
+    private String weatherRisk(String rawContent, boolean success) {
+        if (!success) {
+            return "MEDIUM";
+        }
+        String text = safeText(rawContent);
+        if (text.contains("暴雨") || text.contains("台风") || text.contains("大雪") || text.contains("高温")) {
+            return "HIGH";
+        }
+        if (text.contains("雨") || text.contains("降温") || text.contains("大风")) {
+            return "MEDIUM";
+        }
+        return "LOW";
+    }
+
+    /**
+     * 提取预算或价格文本。
+     *
+     * @param rawContent 原始内容
+     * @return 预算或价格文本
+     */
+    private String extractBudgetText(String rawContent) {
+        String text = safeText(rawContent);
+        java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("(\\d+\\s*[~\\-到至]\\s*\\d+\\s*元?|\\d+\\s*元)").matcher(text);
+        return matcher.find() ? matcher.group(1).replace(" ", "") : "需二次确认";
+    }
+
+    /**
+     * 提取交通耗时文本。
+     *
+     * @param rawContent 原始内容
+     * @return 交通耗时文本
+     */
+    private String extractDurationText(String rawContent) {
+        String text = safeText(rawContent);
+        java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("(\\d+(\\.\\d+)?\\s*(小时|分钟))").matcher(text);
+        return matcher.find() ? matcher.group(1).replace(" ", "") : "需二次确认";
+    }
+
+    /**
+     * 判断交通方式。
+     *
+     * @param rawContent 原始内容
+     * @return 交通方式
+     */
+    private String transportMode(String rawContent) {
+        String text = safeText(rawContent);
+        if (text.contains("高铁") || text.contains("动车")) {
+            return "高铁优先";
+        }
+        if (text.contains("飞机") || text.contains("航班")) {
+            return "飞机";
+        }
+        if (text.contains("自驾")) {
+            return "自驾";
+        }
+        return "公共交通优先";
+    }
+
+    /**
+     * 判断票务风险。
+     *
+     * @param rawContent 原始内容
+     * @param success 是否成功
+     * @return 票务风险
+     */
+    private String ticketRisk(String rawContent, boolean success) {
+        if (!success) {
+            return "HIGH";
+        }
+        String text = safeText(rawContent);
+        if (text.contains("紧张") || text.contains("售罄") || text.contains("节假日") || text.contains("五一") || text.contains("国庆")) {
+            return "HIGH";
+        }
+        if (text.contains("需提前") || text.contains("候补")) {
+            return "MEDIUM";
+        }
+        return "LOW";
     }
 
     /**

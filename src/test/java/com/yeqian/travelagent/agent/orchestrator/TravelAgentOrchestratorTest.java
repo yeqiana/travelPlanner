@@ -14,6 +14,9 @@ import com.yeqian.travelagent.agent.session.TravelSessionStore;
 import com.yeqian.travelagent.application.dto.TravelPlanRequest;
 import com.yeqian.travelagent.application.dto.TravelPlanResponse;
 import com.yeqian.travelagent.infrastructure.ai.JsonExtractor;
+import com.yeqian.travelagent.infrastructure.config.TravelAgentProperties;
+import com.yeqian.travelagent.infrastructure.persistence.entity.TravelSessionEntity;
+import com.yeqian.travelagent.infrastructure.persistence.mapper.TravelSessionMapper;
 import com.yeqian.travelagent.tool.MockAttractionInfoTool;
 import com.yeqian.travelagent.tool.MockHotelSearchTool;
 import com.yeqian.travelagent.tool.MockRouteTool;
@@ -27,8 +30,15 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * 旅行 Agent 编排器测试。
@@ -106,8 +116,46 @@ class TravelAgentOrchestratorTest {
         ReflectionTestUtils.setField(orchestrator, "itineraryPlanner", new ItineraryPlanner());
         ReflectionTestUtils.setField(orchestrator, "reminderGenerator", new ReminderGenerator());
         ReflectionTestUtils.setField(orchestrator, "imageBriefGenerator", new ImageBriefGenerator());
-        ReflectionTestUtils.setField(orchestrator, "travelSessionStore", new TravelSessionStore());
+        ReflectionTestUtils.setField(orchestrator, "travelSessionStore", travelSessionStore());
         return orchestrator;
+    }
+
+    /**
+     * 构造测试用持久化会话仓库。
+     *
+     * @return 注入内存 mapper 的会话仓库
+     */
+    private TravelSessionStore travelSessionStore() {
+        Map<String, TravelSessionEntity> sessions = new ConcurrentHashMap<>();
+        TravelSessionMapper mapper = mock(TravelSessionMapper.class);
+        when(mapper.findBySessionId(any())).thenAnswer(invocation -> Optional.ofNullable(sessions.get(invocation.getArgument(0))));
+        doAnswer(invocation -> {
+            TravelSessionEntity entity = invocation.getArgument(0);
+            sessions.put(entity.getSessionId(), entity);
+            return null;
+        }).when(mapper).insert(any(TravelSessionEntity.class));
+        doAnswer(invocation -> {
+            TravelSessionEntity entity = invocation.getArgument(0);
+            sessions.put(entity.getSessionId(), entity);
+            return null;
+        }).when(mapper).updateClarifying(any(TravelSessionEntity.class));
+        doAnswer(invocation -> {
+            String sessionId = invocation.getArgument(0);
+            TravelSessionEntity entity = sessions.get(sessionId);
+            if (entity != null) {
+                entity.setStatus("COMPLETED");
+                entity.setPartialIntentJson(invocation.getArgument(1));
+                entity.setLastQuestionsJson("[]");
+            }
+            return null;
+        }).when(mapper).markCompleted(any(), any(), any());
+
+        TravelAgentProperties properties = new TravelAgentProperties();
+        TravelSessionStore store = new TravelSessionStore();
+        ReflectionTestUtils.setField(store, "objectMapper", new ObjectMapper().findAndRegisterModules());
+        ReflectionTestUtils.setField(store, "travelSessionMapper", mapper);
+        ReflectionTestUtils.setField(store, "travelAgentProperties", properties);
+        return store;
     }
 
     /**

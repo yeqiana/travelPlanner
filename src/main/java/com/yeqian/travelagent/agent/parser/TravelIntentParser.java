@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -21,6 +22,11 @@ import java.util.regex.Pattern;
  */
 @Component
 public class TravelIntentParser {
+
+    private static final List<String> KNOWN_DESTINATIONS = List.of(
+            "上海周边", "江浙沪周边", "川西小环线", "杭州", "上海", "苏州", "南京", "无锡", "湖州", "宁波",
+            "重庆", "成都", "都江堰", "桂林", "阳朔", "北京", "西安", "广州", "深圳", "厦门", "青岛"
+    );
 
     @Resource
     private ObjectMapper objectMapper;
@@ -109,18 +115,7 @@ public class TravelIntentParser {
         Integer peopleCount = extractPeopleCount(message);
         BigDecimal budget = extractBudget(message);
 
-        List<String> destinations = new ArrayList<>();
-        addIfMentioned(message, destinations, "杭州");
-        addIfMentioned(message, destinations, "上海周边");
-        if (!destinations.contains("上海周边")) {
-            addIfMentioned(message, destinations, "上海");
-        }
-        addIfMentioned(message, destinations, "苏州");
-        addIfMentioned(message, destinations, "南京");
-        addIfMentioned(message, destinations, "重庆");
-        addIfMentioned(message, destinations, "成都");
-        addIfMentioned(message, destinations, "桂林");
-        addIfMentioned(message, destinations, "阳朔");
+        List<String> destinations = extractDestinations(message, departureCity);
 
         List<String> styles = new ArrayList<>();
         if (message.contains("不想太累") || message.contains("轻松")) {
@@ -144,7 +139,70 @@ public class TravelIntentParser {
         if (matcher.find()) {
             return matcher.group(1);
         }
+        Matcher routeMatcher = Pattern.compile("^([\\u4e00-\\u9fa5]{2,8})到[\\u4e00-\\u9fa5]{2,8}").matcher(message);
+        if (routeMatcher.find()) {
+            return routeMatcher.group(1);
+        }
         return null;
+    }
+
+    /**
+     * 提取目的地偏好。
+     *
+     * @param message 用户输入的旅行需求
+     * @param departureCity 已识别出的出发城市
+     * @return 去重后的目的地偏好
+     */
+    private List<String> extractDestinations(String message, String departureCity) {
+        LinkedHashSet<String> destinations = new LinkedHashSet<>();
+        addRouteDestinations(message, destinations, departureCity);
+        for (String destination : KNOWN_DESTINATIONS) {
+            if (message.contains(destination) && !destination.equals(departureCity)) {
+                destinations.add(destination);
+            }
+        }
+        if (destinations.contains("江浙沪周边")) {
+            destinations.add("杭州");
+            destinations.add("苏州");
+            destinations.add("上海周边");
+        }
+        if (destinations.contains("川西小环线")) {
+            destinations.add("成都");
+            destinations.add("都江堰");
+        }
+        if (destinations.contains("上海周边")) {
+            destinations.remove("上海");
+        }
+        return new ArrayList<>(destinations);
+    }
+
+    /**
+     * 从多段路线表达中提取目的地。
+     *
+     * @param message 用户输入的旅行需求
+     * @param destinations 目的地集合
+     * @param departureCity 已识别出的出发城市
+     */
+    private void addRouteDestinations(String message, LinkedHashSet<String> destinations, String departureCity) {
+        Matcher matcher = Pattern.compile("(?:到|去|再去|然后去|顺路去)([\\u4e00-\\u9fa5]{2,8})(?=再去|然后去|顺路去|玩|旅游|周边|\\d|，|,|。|$)").matcher(message);
+        while (matcher.find()) {
+            for (String candidate : matcher.group(1).split("[和与及、]")) {
+                String city = trimDestination(candidate);
+                if (!city.isBlank() && !city.equals(departureCity)) {
+                    destinations.add(city);
+                }
+            }
+        }
+    }
+
+    /**
+     * 清理目的地文本。
+     *
+     * @param value 原始目的地文本
+     * @return 清理后的目的地文本
+     */
+    private String trimDestination(String value) {
+        return value == null ? "" : value.replace("周边", "周边").trim();
     }
 
     /**
@@ -233,16 +291,4 @@ public class TravelIntentParser {
         };
     }
 
-    /**
-     * 如果消息中提到指定值则加入列表。
-     *
-     * @param message 用户输入的旅行需求
-     * @param values 目标列表
-     * @param value 待匹配文本
-     */
-    private void addIfMentioned(String message, List<String> values, String value) {
-        if (message.contains(value)) {
-            values.add(value);
-        }
-    }
 }
