@@ -6,6 +6,20 @@ target/
 *.nar
 *.ear
 
+# Frontend
+node_modules/
+dist/
+build/
+coverage/
+
+# Root-level frontend scratch files; the real WebApp lives in frontend/
+/package.json
+/package-lock.json
+/metadata.json
+/.env.example
+/src/App.tsx
+/src/components/
+
 # IDE
 .idea/
 *.iml
@@ -16,7 +30,7 @@ target/
 .mcp.json
 .env
 .env.*
-!.env.example
+!frontend/.env.example
 *.local
 src/main/resources/application-dev.yml
 src/main/resources/application-local.yml

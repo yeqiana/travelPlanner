@@ -24,9 +24,14 @@ import java.util.regex.Pattern;
 public class TravelIntentParser {
 
     private static final List<String> KNOWN_DESTINATIONS = List.of(
-            "上海周边", "江浙沪周边", "川西小环线", "杭州", "上海", "苏州", "南京", "无锡", "湖州", "宁波",
+            "江浙沪周边", "上海周边", "川西小环线", "杭州", "上海", "苏州", "南京", "无锡", "湖州", "宁波",
             "重庆", "成都", "都江堰", "桂林", "阳朔", "北京", "西安", "广州", "深圳", "厦门", "青岛"
     );
+    private static final List<String> KNOWN_CITY_DESTINATIONS = List.of(
+            "杭州", "上海", "苏州", "南京", "无锡", "湖州", "宁波", "重庆", "成都", "都江堰",
+            "桂林", "阳朔", "北京", "西安", "广州", "深圳", "厦门", "青岛"
+    );
+    private static final List<String> DESTINATION_NOISE_SUFFIXES = List.of("游玩", "旅游", "附近", "一带", "周边", "想去", "玩", "去");
 
     @Resource
     private ObjectMapper objectMapper;
@@ -158,20 +163,18 @@ public class TravelIntentParser {
         addRouteDestinations(message, destinations, departureCity);
         for (String destination : KNOWN_DESTINATIONS) {
             if (message.contains(destination) && !destination.equals(departureCity)) {
-                destinations.add(destination);
+                addNormalizedDestinations(destinations, destination, departureCity);
             }
         }
         if (destinations.contains("江浙沪周边")) {
+            destinations.remove("江浙沪周边");
             destinations.add("杭州");
             destinations.add("苏州");
-            destinations.add("上海周边");
+            destinations.add("上海");
         }
         if (destinations.contains("川西小环线")) {
-            destinations.add("成都");
-            destinations.add("都江堰");
-        }
-        if (destinations.contains("上海周边")) {
-            destinations.remove("上海");
+            addIfNotDeparture(destinations, "成都", departureCity);
+            addIfNotDeparture(destinations, "都江堰", departureCity);
         }
         return new ArrayList<>(destinations);
     }
@@ -187,22 +190,97 @@ public class TravelIntentParser {
         Matcher matcher = Pattern.compile("(?:到|去|再去|然后去|顺路去)([\\u4e00-\\u9fa5]{2,8})(?=再去|然后去|顺路去|玩|旅游|周边|\\d|，|,|。|$)").matcher(message);
         while (matcher.find()) {
             for (String candidate : matcher.group(1).split("[和与及、]")) {
-                String city = trimDestination(candidate);
-                if (!city.isBlank() && !city.equals(departureCity)) {
-                    destinations.add(city);
-                }
+                addNormalizedDestinations(destinations, candidate, departureCity);
             }
         }
     }
 
     /**
-     * 清理目的地文本。
+     * 归一化并加入目的地文本。
+     *
+     * @param destinations 目的地集合
+     * @param candidate 原始目的地文本
+     * @param departureCity 已识别出的出发城市
+     */
+    private void addNormalizedDestinations(LinkedHashSet<String> destinations, String candidate, String departureCity) {
+        String normalized = normalizeDestination(candidate);
+        if (normalized.isBlank() || normalized.equals(departureCity)) {
+            return;
+        }
+        if ("江浙沪".equals(normalized) || "江浙沪周边".equals(candidate)) {
+            addIfNotDeparture(destinations, "杭州", departureCity);
+            addIfNotDeparture(destinations, "苏州", departureCity);
+            addIfNotDeparture(destinations, "上海", departureCity);
+            return;
+        }
+        List<String> splitCities = splitCombinedDestination(normalized);
+        if (!splitCities.isEmpty()) {
+            for (String city : splitCities) {
+                addIfNotDeparture(destinations, city, departureCity);
+            }
+            return;
+        }
+        addIfNotDeparture(destinations, normalized, departureCity);
+    }
+
+    /**
+     * 清洗目的地文本中的动作词和区域后缀。
      *
      * @param value 原始目的地文本
-     * @return 清理后的目的地文本
+     * @return 清洗后的目的地文本
      */
-    private String trimDestination(String value) {
-        return value == null ? "" : value.replace("周边", "周边").trim();
+    private String normalizeDestination(String value) {
+        if (value == null) {
+            return "";
+        }
+        String normalized = value.trim()
+                .replaceAll("^[想要打算计划]*去", "")
+                .replaceAll("[，,。.!！?？\\s]", "");
+        boolean changed;
+        do {
+            changed = false;
+            for (String suffix : DESTINATION_NOISE_SUFFIXES) {
+                if (normalized.endsWith(suffix) && normalized.length() > suffix.length()) {
+                    normalized = normalized.substring(0, normalized.length() - suffix.length());
+                    changed = true;
+                }
+            }
+        } while (changed);
+        return normalized.trim();
+    }
+
+    /**
+     * 拆分粘连的多城市目的地。
+     *
+     * @param value 清洗后的目的地文本
+     * @return 拆分出的城市列表
+     */
+    private List<String> splitCombinedDestination(String value) {
+        List<String> cities = new ArrayList<>();
+        String remaining = value;
+        for (String city : KNOWN_CITY_DESTINATIONS) {
+            if (remaining.contains(city)) {
+                cities.add(city);
+                remaining = remaining.replace(city, "");
+            }
+        }
+        if (cities.size() <= 1 || !remaining.isBlank()) {
+            return List.of();
+        }
+        return cities;
+    }
+
+    /**
+     * 如果不是出发地则加入目的地集合。
+     *
+     * @param destinations 目的地集合
+     * @param destination 目的地
+     * @param departureCity 出发城市
+     */
+    private void addIfNotDeparture(LinkedHashSet<String> destinations, String destination, String departureCity) {
+        if (destination != null && !destination.isBlank() && !destination.equals(departureCity)) {
+            destinations.add(destination);
+        }
     }
 
     /**

@@ -29,7 +29,8 @@ class TravelIntentParserTest {
         assertThat(intent.days()).isEqualTo(4);
         assertThat(intent.peopleCount()).isEqualTo(2);
         assertThat(intent.budget()).isEqualByComparingTo(BigDecimal.valueOf(3000));
-        assertThat(intent.destinationPreferences()).contains("杭州", "上海周边");
+        assertThat(intent.destinationPreferences()).contains("杭州", "上海");
+        assertThat(intent.destinationPreferences()).doesNotContain("上海周边", "杭州和上海周边");
         assertThat(intent.travelStyles()).contains("不想太累", "节假日");
     }
 
@@ -71,7 +72,8 @@ class TravelIntentParserTest {
     void shouldParseFuzzyDestinationExpression() {
         TravelIntent intent = parser().parse("五一从西安出发去江浙沪周边玩4天，两个人");
 
-        assertThat(intent.destinationPreferences()).contains("江浙沪周边", "杭州", "苏州", "上海周边");
+        assertThat(intent.destinationPreferences()).contains("杭州", "苏州", "上海");
+        assertThat(intent.destinationPreferences()).doesNotContain("江浙沪周边", "上海周边");
     }
 
     /**
@@ -83,6 +85,39 @@ class TravelIntentParserTest {
 
         assertThat(intent.departureCity()).isEqualTo("成都");
         assertThat(intent.destinationPreferences()).contains("川西小环线", "都江堰");
+    }
+
+    /**
+     * 验证目的地后缀动作词会被清理。
+     */
+    @Test
+    void shouldCleanActionSuffixFromDestination() {
+        TravelIntent intent = parser().parse("五一从西安出发，想去杭州玩");
+
+        assertThat(intent.destinationPreferences()).contains("杭州");
+        assertThat(intent.destinationPreferences()).doesNotContain("杭州玩");
+    }
+
+    /**
+     * 验证粘连的城市周边表达会拆分为城市。
+     */
+    @Test
+    void shouldSplitCombinedCityAreaExpression() {
+        TravelIntent intent = parser().parse("五一从西安出发，想去杭州上海周边");
+
+        assertThat(intent.destinationPreferences()).contains("杭州", "上海");
+        assertThat(intent.destinationPreferences()).doesNotContain("杭州上海周边", "上海周边");
+    }
+
+    /**
+     * 验证带连接词的城市周边表达会拆分为城市。
+     */
+    @Test
+    void shouldSplitCombinedCityAreaExpressionWithConnector() {
+        TravelIntent intent = parser().parse("五一从西安出发，想去杭州和上海周边");
+
+        assertThat(intent.destinationPreferences()).contains("杭州", "上海");
+        assertThat(intent.destinationPreferences()).doesNotContain("杭州和上海周边", "上海周边");
     }
 
     /**
