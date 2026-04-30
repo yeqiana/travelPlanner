@@ -3,6 +3,7 @@ import { Compass, Clock, Share2, BedDouble, Utensils, Navigation, Info, Sparkles
 import { AnimatePresence } from 'motion/react';
 import { Itinerary, Activity, DayPlan } from '../../../shared/types/travel';
 import { LocationShareModal } from './LocationShareModal';
+import { TravelPlanOverview } from './TravelPlanOverview';
 
 function formatTime(timeStr: string) {
   if (!timeStr) return '未知';
@@ -28,6 +29,8 @@ export function InteractiveItinerary({ itinerary }: { itinerary: Itinerary }) {
           <h2 className="text-[20px] font-black text-gray-900 tracking-tight leading-snug mb-2">{itinerary.title}</h2>
           <p className="text-[14px] text-gray-500 leading-relaxed font-medium">{itinerary.summary}</p>
         </div>
+
+        <TravelPlanOverview itinerary={itinerary} />
         
         <div className="max-h-[65vh] overflow-y-auto px-4 py-5 space-y-8">
           {itinerary.days.map((day, dIdx) => (

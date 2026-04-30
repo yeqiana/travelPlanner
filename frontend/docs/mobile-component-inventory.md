@@ -26,6 +26,11 @@ src/
 | `components/HomeForm.tsx` | 首页旅行需求表单 | 表单状态和样式集中；chip、stepper 可复用 | `pages/home` 或 `features/travel-planning/components` |
 | `components/ChatView.tsx` | 聊天消息列表、底部输入、推荐追问、行程操作按钮 | 聊天 UI、输入框、行程操作混在一起 | `pages/chat` + `features/chat-session/components` |
 | `components/InteractiveItinerary.tsx` | 行程卡片、按天时间线、估价、交通提示、分享入口 | 行程展示逻辑较重，卡片和 timeline 可拆 | `features/travel-planning/components` |
+| `features/travel-planning/components/TravelPlanOverview.tsx` | 后端 `imageBrief` 只读展示容器，组合路线、每日卡片、预算、风险和提醒 | 当前只做展示，不承载请求和状态 | 保留在 `features/travel-planning/components` |
+| `features/travel-planning/components/RouteLine.tsx` | 渲染行程路线节点 | 后续可补城市图标或交通方式，但不做真实导航 | 保留在 `features/travel-planning/components` |
+| `features/travel-planning/components/DayCardList.tsx` | 渲染一图流每日卡片 | 只消费 `imageBrief.dayCards` 或 fallback 数据 | 保留在 `features/travel-planning/components` |
+| `features/travel-planning/components/RiskTagList.tsx` | 渲染风险标签 | 标签过多时需要控制展示密度 | 保留在 `features/travel-planning/components` |
+| `features/travel-planning/components/ReminderCardList.tsx` | 渲染提醒卡片 | 当前最多展示前 6 条，避免移动端过长 | 保留在 `features/travel-planning/components` |
 | `components/SettingsModal.tsx` | 用户旅行偏好设置 | 表单选项写死在组件内 | `features/user-preferences/components` |
 | `components/SessionSearchModal.tsx` | 历史会话搜索 | 搜索逻辑和展示耦合 | `features/chat-session/components` |
 | `components/RouteMapModal.tsx` | 一图流路线弹窗 | 分享图 UI 较独立，但样式复杂 | `features/itinerary-share/components` |

@@ -20,12 +20,34 @@ export interface DayPlan {
   activities: Activity[];
 }
 
+export interface DayCard {
+  day: number;
+  title: string;
+  items: string[];
+}
+
+export interface BudgetCard {
+  name: string;
+  value: string;
+}
+
+export interface ReminderCard {
+  title: string;
+  time?: string;
+}
+
 export interface Itinerary {
   title: string;
   summary: string;
   days: DayPlan[];
   tips: string[];
   assistantReply?: string;
+  routeLine?: string[];
+  dayCards?: DayCard[];
+  riskTags?: string[];
+  reminderCards?: ReminderCard[];
+  budgetCards?: BudgetCard[];
+  footerNote?: string;
 }
 
 export interface UserPreferences {
@@ -57,4 +79,3 @@ export interface ChatSession {
   updatedAt: number;
   history: ChatMessage[];
 }
-

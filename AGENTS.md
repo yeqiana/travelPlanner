@@ -35,7 +35,8 @@
 ## 开发环境
 
 1. JDK 目录：`D:\soft\jdk17.0.18`
-2. Maven 测试建议命令：
+2. 前端 Node.js 版本固定使用 `v20.20.2`，不要因为本地工具或浏览器自动化插件要求更高版本而调整项目运行基线。
+3. Maven 测试建议命令：
 
 ```powershell
 $env:JAVA_HOME="D:\soft\jdk17.0.18"

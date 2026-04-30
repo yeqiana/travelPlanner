@@ -27,6 +27,8 @@
 - motion。
 - react-markdown / remark-gfm。
 
+前端本地运行和构建的 Node.js 版本固定使用 `v20.20.2`。不要因为 Codex 浏览器插件、IDE 插件或其他本地工具要求更高 Node 版本而调整项目前端基线；工具侧限制应在验证结论中单独说明。
+
 不要在没有明确需求和方案评审的情况下引入 React Router、状态管理库、UI 组件库或新的 CSS 方案。
 
 ## 目录规范
@@ -112,9 +114,12 @@ src/
 代码改动后优先执行：
 
 ```powershell
+node -v
 npm run lint
 npm run build
 ```
+
+其中 `node -v` 应为 `v20.20.2`。
 
 如果当前环境缺少依赖或命令不可用，必须在最终回复中说明。
 

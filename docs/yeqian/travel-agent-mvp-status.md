@@ -1,14 +1,14 @@
 # TravelPlanner MVP 阶段性状态报告
 
-> 状态：MVP 三批次已完成  
+> 状态：P4 只读前端 MVP 初版已完成，当前处于验收收口阶段  
 > 当前定位：规则型 Travel Agent MVP  
-> 测试状态：52 tests passed  
-> 更新时间：2026-04-29  
+> 测试状态：后端 52 tests passed；前端 lint/build 已通过  
+> 更新时间：2026-04-30  
 > 适用范围：后端 MVP 状态说明、后续 Codex 接手、阶段性验收
 
 ## 一句话结论
 
-TravelPlanner 当前已完成从自然语言输入到多轮追问、工具调用、结构化证据、可解释评分、行程生成、提醒生成和一图流结构化输出的 MVP 闭环；当前仍是规则型 Agent，不包含 RAG、MCP、前端和真实交易链路。
+TravelPlanner 当前已完成从自然语言输入到多轮追问、工具调用、结构化证据、可解释评分、行程生成、提醒生成、一图流结构化输出和只读前端展示的 MVP 闭环；当前仍是规则型 Agent，不包含 RAG、MCP 和真实交易链路。
 
 ## 1. MVP 当前定位
 
@@ -37,9 +37,9 @@ TravelPlanner 当前已完成从自然语言输入到多轮追问、工具调用
 
 - RAG 攻略知识库。
 - MCP 工具平台。
-- 前端页面。
 - 真实票务下单。
 - 真实酒店预订。
+- 写入型前端能力。
 
 评分和规划仍主要基于规则、mock 降级和有限真实工具结果，不应夸大为智能推荐系统或交易闭环系统。
 
@@ -155,6 +155,39 @@ ATTRACTION evidence 关键字段：
 - 评分仍是启发式规则。
 - evidenceRefs 当前使用 `title/sourceName`，还没有复杂 evidenceId 体系。
 - WEATHER / HOTEL / TRANSPORT evidence 的结构化程度弱于 ROUTE / ATTRACTION。
+
+### P4：只读前端 MVP 初版
+
+当前状态：
+
+P4：只读前端 MVP 初版已完成，已接入旅行计划展示、追问展示、imageBrief / recommendedPlan fallback，当前处于验收收口阶段。
+
+已完成内容：
+
+- 前端固定使用 Node.js `v20.20.2`，不因 Codex 浏览器插件、IDE 插件或其他工具要求更高版本而调整项目运行基线。
+- 只读前端接入后端 `localhost:8080` 的旅行计划接口。
+- 支持展示推荐方案、路线概览、日程卡片、风险标签和提醒卡片。
+- 支持缺失信息时展示追问状态，并保留 `sessionId` 用于下一轮补充。
+- 支持优先消费 `imageBrief`，当 `imageBrief` 为空或字段不完整时 fallback 到 `recommendedPlan`。
+- 当前前端不提供真实登录、真实下单、写入型交易或复杂状态管理能力。
+
+验收方式：
+
+- 前端环境检查在 `frontend` 目录执行：
+  - `node -v`
+  - `npm run lint`
+  - `npm run build`
+- 手工联调时后端运行在 `localhost:8080`，前端运行在 `localhost:3000`。
+- 使用完整旅行需求、缺少出发地、补充出发地、`imageBrief` 为空或字段不完整四类用例验收。
+- 移动端视觉重点检查 routeLine、dayCards、riskTags、reminderCards、按钮、卡片滚动区域和横向滚动。
+
+当前限制：
+
+- 当前仅为只读展示型前端 MVP，不做真实登录、收藏、订单、支付、票务、酒店预订等写入能力。
+- 当前不新增 RAG，不新增 MCP，不接入新的工具平台。
+- 当前不替换前端技术栈，不新增 UI 库，不重构整个前端。
+- 当前手工联调需要本地同时启动后端和前端服务。
+- 当前 session 仍依赖后端内存态能力，应用重启后无法保证追问上下文恢复。
 
 ## 3. 当前主链路
 
@@ -334,13 +367,121 @@ BUILD SUCCESS
 6. 真实酒店预订未接入。
 7. RAG 未接入。
 8. MCP 未接入。
-9. 前端未开发。
+9. 只读前端 MVP 初版已完成，但仍处于 P4 验收收口阶段。
 10. 评分仍是启发式规则。
 11. evidenceRefs 暂用 `title/sourceName`，未建立复杂 evidenceId 体系。
 12. WEATHER / HOTEL / TRANSPORT evidence 结构化消费仍较弱。
 13. Maven 有 SLF4J 多 binding 警告，但不影响测试和打包。
 
-## 8. 下一阶段建议
+## 8. P4 手工联调验收清单
+
+联调地址：
+
+- 后端：`localhost:8080`
+- 前端：`localhost:3000`
+
+### 验收用例 1：完整旅行需求
+
+输入：
+
+```text
+五一从西安出发，4天，两个人，预算3000，想去杭州上海周边，不想太累
+```
+
+检查：
+
+- 页面能正常发起请求。
+- 能展示推荐方案。
+- 能展示 `routeLine`。
+- 能展示 `dayCards`。
+- 能展示 `riskTags`。
+- 能展示 `reminderCards`。
+- 页面没有空白卡片。
+- 页面没有 `undefined` / `null` / `[object Object]`。
+
+### 验收用例 2：缺少出发地
+
+输入：
+
+```text
+五一想出去玩4天，两个人，预算3000，不想太累
+```
+
+检查：
+
+- 页面展示追问状态。
+- 能展示 `clarificationQuestions` 或 `structuredClarificationQuestions`。
+- 不渲染空白行程卡片。
+- 不误展示推荐方案。
+- `sessionId` 能保留用于下一轮补充。
+
+### 验收用例 3：补充出发地
+
+输入：
+
+```text
+我从西安出发，想去杭州上海周边
+```
+
+检查：
+
+- 前端携带上一轮 `sessionId`。
+- 后端能合并上下文。
+- 信息完整后进入正常计划展示。
+- 页面从追问状态切换到计划展示状态。
+
+### 验收用例 4：imageBrief 为空或字段不完整
+
+检查：
+
+- 页面 fallback 到 `recommendedPlan`。
+- 不出现空白主区域。
+- 不出现运行时异常。
+- 不出现 `undefined` / `null` 文案。
+
+## 9. P4 移动端视觉检查清单
+
+检查项：
+
+- 小屏下 `routeLine` 是否正常换行。
+- `dayCards` 是否保持可读。
+- `riskTags` 是否换行正常。
+- `reminderCards` 是否不重叠。
+- 按钮是否不溢出。
+- 卡片和滚动区域是否不互相遮挡。
+- 页面是否有明显横向滚动。
+
+当前结论：
+
+- 移动端视觉检查项已纳入 P4 收口验收范围。
+- 已做代码级走查并完成 P4 范围内的小修复：`routeLine` 改为小屏换行，`dayCards`、`riskTags`、`reminderCards` 增加长文本断词，降低移动端溢出风险。
+- 已通过 `npm run lint` 和 `npm run build` 验证样式修复不破坏前端构建。
+- 浏览器插件截图走查未执行：当前插件运行时要求 Node.js `>= v22.22.0`，项目基线固定为 `v20.20.2`，本阶段不为插件升级 Node。
+
+## 10. P4 收口验证记录
+
+验证时间：2026-04-30。
+
+前端环境检查：
+
+- `node -v`：`v20.20.2`。
+- `npm run lint`：通过，执行 `tsc --noEmit`。
+- `npm run build`：通过，Vite 构建成功；存在 chunk 超过 500 kB 的提示，不影响 P4 构建通过。
+
+本地联调检查：
+
+- 后端 `localhost:8080` 已监听。
+- 前端 `localhost:3000` 已监听。
+- 完整旅行需求接口验证通过：`needClarification=false`，返回 `recommendedPlan`，且 `imageBrief` 中包含 `routeLine`、`dayCards`、`riskTags`、`reminderCards`。
+- 缺少出发地接口验证通过：`needClarification=true`，返回 `clarificationQuestions` 和 `structuredClarificationQuestions`，不返回推荐方案。
+- 补充出发地接口验证通过：前端应携带上一轮 `sessionId`；接口侧验证同一 `sessionId` 可合并上下文，并在信息完整后返回推荐方案。
+
+未验证项：
+
+- 未执行浏览器插件截图验收；原因是插件运行时要求 Node.js `>= v22.22.0`，而项目前端基线固定为 `v20.20.2`，本阶段不为插件升级 Node。
+- `imageBrief` 为空或字段不完整的页面级 fallback 未通过浏览器截图验证；当前以前端适配逻辑、lint 和 build 作为收口验证依据。
+
+## 11. 下一阶段建议
 
 建议按以下优先级推进。
 
@@ -390,26 +531,26 @@ BUILD SUCCESS
 
 - 当前 Batch 3 已打通 evidence 消费模式，下一步应扩展证据类型，而不是重写主链路。
 
-### P4：准备只读前端 MVP
+### P4：只读前端 MVP 验收收口
 
 目标：
 
-- 基于 `imageBrief` 渲染路线、一日卡片、风险标签和提醒卡片。
-- 先做只读展示，不做复杂交易。
+- 完成只读前端 MVP 的环境检查、手工联调和移动端视觉走查。
+- 只修复 P4 验收范围内的问题，不新增大功能。
 
 原因：
 
-- 当前后端已经给出可渲染结构，适合做轻量演示页面。
+- 只读前端 MVP 初版已经接入核心展示能力，当前重点是确认可运行、可展示、无明显空白和异常文案。
 
 ### P5：评估 RAG / MCP
 
 目标：
 
-- 在主链路稳定后，再评估是否引入 RAG 攻略知识库或 MCP 工具平台。
+- 后续 P5 只做 RAG / MCP 评估文档，不做实现。
 
 原因：
 
-- 当前阶段核心是稳定 MVP 闭环，不应过早扩大架构。 
+- 当前阶段核心是稳定 P4 MVP 闭环，不应过早扩大架构或新增工具平台。 
 ## 后续 Codex 接手注意事项
 
 1. 不要重写 TravelAgentOrchestrator 主链路。
