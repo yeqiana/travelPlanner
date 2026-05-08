@@ -6,11 +6,12 @@ import java.util.List;
 /**
  * 旅行规划会话上下文。
  *
- * <p>用于保存多轮追问过程中已经解析出的部分意图和上一轮澄清问题。</p>
+ * <p>用于保存多轮追问过程中的部分意图、上一轮追问问题，以及完成态会话的上一轮完整计划上下文。</p>
  *
  * @param sessionId 会话编号
- * @param partialIntent 已解析出的部分旅行意图
+ * @param partialIntent 已解析出的部分或完整旅行意图
  * @param lastQuestions 上一轮结构化澄清问题
+ * @param previousPlanContext 上一轮完整计划上下文
  * @param createdAt 创建时间
  * @param updatedAt 更新时间
  * @param status 会话状态
@@ -19,6 +20,7 @@ public record TravelSessionContext(
         String sessionId,
         TravelIntent partialIntent,
         List<ClarificationQuestion> lastQuestions,
+        PreviousTravelPlanContext previousPlanContext,
         LocalDateTime createdAt,
         LocalDateTime updatedAt,
         String status
@@ -41,7 +43,7 @@ public record TravelSessionContext(
      * @return 更新后的会话上下文
      */
     public TravelSessionContext withClarifyingIntent(TravelIntent intent, List<ClarificationQuestion> questions) {
-        return new TravelSessionContext(sessionId, intent, questions, createdAt, LocalDateTime.now(), "CLARIFYING");
+        return new TravelSessionContext(sessionId, intent, questions, previousPlanContext, createdAt, LocalDateTime.now(), "CLARIFYING");
     }
 
     /**
@@ -51,6 +53,6 @@ public record TravelSessionContext(
      * @return 更新后的会话上下文
      */
     public TravelSessionContext withCompletedIntent(TravelIntent intent) {
-        return new TravelSessionContext(sessionId, intent, List.of(), createdAt, LocalDateTime.now(), "COMPLETED");
+        return new TravelSessionContext(sessionId, intent, List.of(), previousPlanContext, createdAt, LocalDateTime.now(), "COMPLETED");
     }
 }

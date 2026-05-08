@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS travel_session (
     status VARCHAR(32) NOT NULL COMMENT '会话状态：CLARIFYING 或 COMPLETED',
     partial_intent_json LONGTEXT NULL COMMENT '已解析出的部分旅行意图JSON',
     last_questions_json LONGTEXT NULL COMMENT '上一轮结构化追问问题JSON',
+    last_response_json LONGTEXT NULL COMMENT '上一轮完整旅行规划响应上下文JSON',
     expires_at DATETIME NOT NULL COMMENT '会话过期时间',
     created_at DATETIME NOT NULL COMMENT '创建时间',
     updated_at DATETIME NOT NULL COMMENT '更新时间',

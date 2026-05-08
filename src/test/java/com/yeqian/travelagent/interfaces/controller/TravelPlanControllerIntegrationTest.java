@@ -28,12 +28,15 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -194,6 +197,29 @@ class TravelPlanControllerIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.needClarification").value(true))
                 .andExpect(jsonPath("$.data.clarificationQuestions[0]").value("你是从哪个城市出发？"));
+    }
+
+    /**
+     * 验证流式接口可以启动异步 SSE 响应并返回完成事件。
+     *
+     * @throws Exception MockMvc 执行异常
+     */
+    @Test
+    void shouldCreatePlanWithStreamEndpoint() throws Exception {
+        TravelPlanResponse response = completeResponse().withPlanId("plan-test-001");
+        TravelPlanningApplicationService service = mock(TravelPlanningApplicationService.class);
+        when(service.plan(any(TravelPlanRequest.class))).thenReturn(response);
+
+        MvcResult result = mockMvc(service).perform(post("/api/travel/plans/stream")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"message\":\"五一从西安出发去杭州玩3天，两个人，预算3000\",\"sessionId\":\"s1\"}"))
+                .andExpect(status().isOk())
+                .andExpect(request().asyncStarted())
+                .andReturn();
+
+        mockMvc(service).perform(asyncDispatch(result))
+                .andExpect(status().isOk());
+        assertThat(result.getResponse().getContentAsString()).contains("event:stage", "event:completed");
     }
 
     /**

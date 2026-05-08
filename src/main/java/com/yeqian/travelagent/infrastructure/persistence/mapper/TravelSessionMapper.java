@@ -30,13 +30,14 @@ public class TravelSessionMapper {
         jdbcTemplate.update(
                 """
                         INSERT INTO travel_session
-                        (session_id, status, partial_intent_json, last_questions_json, expires_at, created_at, updated_at)
-                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                        (session_id, status, partial_intent_json, last_questions_json, last_response_json, expires_at, created_at, updated_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                         """,
                 entity.getSessionId(),
                 entity.getStatus(),
                 entity.getPartialIntentJson(),
                 entity.getLastQuestionsJson(),
+                entity.getLastResponseJson(),
                 toTimestamp(entity.getExpiresAt()),
                 toTimestamp(entity.getCreatedAt()),
                 toTimestamp(entity.getUpdatedAt())
@@ -69,16 +70,20 @@ public class TravelSessionMapper {
      *
      * @param sessionId 会话编号
      * @param partialIntentJson 完成时的意图 JSON
+     * @param lastResponseJson 上一轮完整计划上下文 JSON
+     * @param expiresAt 会话过期时间
      * @param updatedAt 更新时间
      */
-    public void markCompleted(String sessionId, String partialIntentJson, LocalDateTime updatedAt) {
+    public void markCompleted(String sessionId, String partialIntentJson, String lastResponseJson, LocalDateTime expiresAt, LocalDateTime updatedAt) {
         jdbcTemplate.update(
                 """
                         UPDATE travel_session
-                        SET status = 'COMPLETED', partial_intent_json = ?, last_questions_json = '[]', updated_at = ?
+                        SET status = 'COMPLETED', partial_intent_json = ?, last_questions_json = '[]', last_response_json = COALESCE(?, last_response_json), expires_at = ?, updated_at = ?
                         WHERE session_id = ?
                         """,
                 partialIntentJson,
+                lastResponseJson,
+                toTimestamp(expiresAt),
                 toTimestamp(updatedAt),
                 sessionId
         );
@@ -94,7 +99,7 @@ public class TravelSessionMapper {
         try {
             TravelSessionEntity entity = jdbcTemplate.queryForObject(
                     """
-                            SELECT session_id, status, partial_intent_json, last_questions_json,
+                            SELECT session_id, status, partial_intent_json, last_questions_json, last_response_json,
                                    expires_at, created_at, updated_at
                             FROM travel_session
                             WHERE session_id = ?
@@ -105,6 +110,7 @@ public class TravelSessionMapper {
                         session.setStatus(rs.getString("status"));
                         session.setPartialIntentJson(rs.getString("partial_intent_json"));
                         session.setLastQuestionsJson(rs.getString("last_questions_json"));
+                        session.setLastResponseJson(rs.getString("last_response_json"));
                         session.setExpiresAt(toLocalDateTime(rs.getTimestamp("expires_at")));
                         session.setCreatedAt(toLocalDateTime(rs.getTimestamp("created_at")));
                         session.setUpdatedAt(toLocalDateTime(rs.getTimestamp("updated_at")));

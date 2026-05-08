@@ -20,6 +20,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+
+import java.io.IOException;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * 旅行计划控制器。
@@ -125,6 +129,49 @@ public class TravelPlanController {
     })
     public Result<TravelPlanResponse> createPlan(@Valid @RequestBody TravelPlanRequest request) {
         return Result.success(travelPlanningApplicationService.plan(request));
+    }
+
+    /**
+     * 流式创建旅行计划。
+     *
+     * @param request 旅行计划请求
+     * @return SSE 事件流
+     */
+    @PostMapping("/stream")
+    @Operation(summary = "流式创建旅行计划", description = "通过 SSE 返回阶段性进度，完成后返回完整旅行计划响应。")
+    public SseEmitter streamPlan(@Valid @RequestBody TravelPlanRequest request) {
+        SseEmitter emitter = new SseEmitter(120_000L);
+        CompletableFuture.runAsync(() -> {
+            try {
+                sendEvent(emitter, "stage", "正在理解旅行需求");
+                sendEvent(emitter, "stage", "正在检查缺失信息");
+                sendEvent(emitter, "stage", "正在查询天气、路线和景点参考");
+                sendEvent(emitter, "stage", "正在生成每日详细行程");
+                TravelPlanResponse response = travelPlanningApplicationService.plan(request);
+                sendEvent(emitter, "stage", "正在整理提醒和风险");
+                sendEvent(emitter, "completed", Result.success(response));
+                emitter.complete();
+            } catch (Exception exception) {
+                sendEvent(emitter, "error", exception.getMessage() == null ? "流式生成旅行计划失败" : exception.getMessage());
+                emitter.completeWithError(exception);
+            }
+        });
+        return emitter;
+    }
+
+    /**
+     * 发送 SSE 事件。
+     *
+     * @param emitter SSE 发射器
+     * @param eventName 事件名称
+     * @param data 事件数据
+     */
+    private void sendEvent(SseEmitter emitter, String eventName, Object data) {
+        try {
+            emitter.send(SseEmitter.event().name(eventName).data(data));
+        } catch (IOException exception) {
+            throw new IllegalStateException("发送旅行计划流式事件失败", exception);
+        }
     }
 
     /**

@@ -16,6 +16,8 @@ import com.yeqian.travelagent.infrastructure.persistence.mapper.TravelPlanMapper
 import com.yeqian.travelagent.infrastructure.persistence.mapper.TravelReminderMapper;
 import com.yeqian.travelagent.infrastructure.persistence.mapper.TravelTaskMapper;
 import jakarta.annotation.Resource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +33,8 @@ import java.util.stream.IntStream;
  */
 @Service
 public class TravelPlanPersistenceService {
+
+    private static final Logger log = LoggerFactory.getLogger(TravelPlanPersistenceService.class);
 
     @Resource
     private ObjectMapper objectMapper;
@@ -58,6 +62,11 @@ public class TravelPlanPersistenceService {
         String planId = UUID.randomUUID().toString();
         TravelPlanResponse savedResponse = response.withPlanId(planId);
         OffsetDateTime now = OffsetDateTime.now();
+        log.info("旅行计划持久化开始：planId={}, tasks={}, evidences={}, reminders={}",
+                planId,
+                savedResponse.tasks().size(),
+                savedResponse.evidences().size(),
+                savedResponse.reminders().size());
 
         TravelPlanEntity planEntity = new TravelPlanEntity();
         planEntity.setPlanId(planId);
@@ -69,6 +78,7 @@ public class TravelPlanPersistenceService {
         travelTaskMapper.batchInsert(taskEntities(savedResponse, now));
         travelEvidenceMapper.batchInsert(evidenceEntities(savedResponse, now));
         travelReminderMapper.batchInsert(reminderEntities(savedResponse, now));
+        log.info("旅行计划持久化完成：planId={}", planId);
         return savedResponse;
     }
 
@@ -79,6 +89,7 @@ public class TravelPlanPersistenceService {
      * @return 保存时的旅行计划响应
      */
     public TravelPlanResponse findByPlanId(String planId) {
+        log.info("查询历史旅行计划：planId={}", planId);
         TravelPlanEntity entity = travelPlanMapper.findByPlanId(planId)
                 .orElseThrow(() -> new IllegalArgumentException("旅行计划不存在：" + planId));
         return fromJson(entity.getResponseJson(), TravelPlanResponse.class);

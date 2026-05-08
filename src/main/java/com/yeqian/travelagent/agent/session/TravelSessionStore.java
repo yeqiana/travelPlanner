@@ -3,7 +3,9 @@ package com.yeqian.travelagent.agent.session;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.yeqian.travelagent.application.dto.TravelPlanResponse;
 import com.yeqian.travelagent.domain.model.ClarificationQuestion;
+import com.yeqian.travelagent.domain.model.PreviousTravelPlanContext;
 import com.yeqian.travelagent.domain.model.TravelIntent;
 import com.yeqian.travelagent.domain.model.TravelSessionContext;
 import com.yeqian.travelagent.infrastructure.config.TravelAgentProperties;
@@ -72,6 +74,7 @@ public class TravelSessionStore {
                     normalizedSessionId,
                     intent,
                     questions,
+                    null,
                     now,
                     now,
                     STATUS_CLARIFYING
@@ -105,10 +108,63 @@ public class TravelSessionStore {
      * @param intent 完整旅行意图
      */
     public void markCompleted(String sessionId, TravelIntent intent) {
-        TravelSessionContext existingContext = findBySessionId(sessionId);
-        if (existingContext != null) {
-            travelSessionMapper.markCompleted(existingContext.sessionId(), toJson(intent), LocalDateTime.now());
+        if (!hasText(sessionId)) {
+            return;
         }
+        TravelSessionContext existingContext = findBySessionId(sessionId);
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime expiresAt = now.plusHours(sessionTtlHours());
+        if (existingContext != null) {
+            travelSessionMapper.markCompleted(existingContext.sessionId(), toJson(intent), null, expiresAt, now);
+            return;
+        }
+        TravelSessionContext createdContext = new TravelSessionContext(
+                sessionId,
+                intent,
+                List.of(),
+                null,
+                now,
+                now,
+                STATUS_COMPLETED
+        );
+        travelSessionMapper.insert(toEntity(createdContext, expiresAt));
+    }
+
+    /**
+     * 将会话标记为已完成，并保存上一轮完整计划上下文。
+     *
+     * @param sessionId 会话编号
+     * @param response 已完成并落库后的旅行规划响应
+     */
+    public void markCompleted(String sessionId, TravelPlanResponse response) {
+        if (!hasText(sessionId) || response == null) {
+            return;
+        }
+        PreviousTravelPlanContext previousPlanContext = new PreviousTravelPlanContext(
+                response.planId(),
+                response.intent(),
+                response.recommendedPlan(),
+                response.reminders(),
+                response.risks()
+        );
+        TravelIntent intent = response.intent();
+        TravelSessionContext existingContext = findBySessionId(sessionId);
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime expiresAt = now.plusHours(sessionTtlHours());
+        if (existingContext != null) {
+            travelSessionMapper.markCompleted(existingContext.sessionId(), toJson(intent), toJson(previousPlanContext), expiresAt, now);
+            return;
+        }
+        TravelSessionContext createdContext = new TravelSessionContext(
+                sessionId,
+                intent,
+                List.of(),
+                previousPlanContext,
+                now,
+                now,
+                STATUS_COMPLETED
+        );
+        travelSessionMapper.insert(toEntity(createdContext, expiresAt));
     }
 
     /**
@@ -118,7 +174,7 @@ public class TravelSessionStore {
      * @return 未过期且处于追问状态时返回 true
      */
     private boolean isRecoverable(TravelSessionEntity entity) {
-        return STATUS_CLARIFYING.equals(entity.getStatus())
+        return (STATUS_CLARIFYING.equals(entity.getStatus()) || STATUS_COMPLETED.equals(entity.getStatus()))
                 && entity.getExpiresAt() != null
                 && entity.getExpiresAt().isAfter(LocalDateTime.now());
     }
@@ -134,6 +190,7 @@ public class TravelSessionStore {
                 entity.getSessionId(),
                 fromJson(entity.getPartialIntentJson(), TravelIntent.class),
                 fromQuestionJson(entity.getLastQuestionsJson()),
+                fromJson(entity.getLastResponseJson(), PreviousTravelPlanContext.class),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt(),
                 entity.getStatus()
@@ -153,6 +210,7 @@ public class TravelSessionStore {
         entity.setStatus(context.status());
         entity.setPartialIntentJson(toJson(context.partialIntent()));
         entity.setLastQuestionsJson(toJson(context.lastQuestions()));
+        entity.setLastResponseJson(toJson(context.previousPlanContext()));
         entity.setExpiresAt(expiresAt);
         entity.setCreatedAt(context.createdAt());
         entity.setUpdatedAt(context.updatedAt());

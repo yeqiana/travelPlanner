@@ -118,9 +118,25 @@ export default function App() {
   const activeSession = sessions.find(s => s.id === currentSessionId);
   const history = activeSession?.history || [];
 
+  const updateLoadingStage = (sessionId: string, messageId: string, text: string) => {
+    if (!text.trim()) return;
+    setSessions(currentSessions => currentSessions.map(session => {
+      if (session.id !== sessionId) return session;
+      return {
+        ...session,
+        history: session.history.map(message =>
+          message.id === messageId && message.isLoading
+            ? { ...message, text }
+            : message
+        )
+      };
+    }));
+  };
+
   const handleInitialGenerate = async (prefs: TravelPreferences) => {
     const newSessionId = Date.now().toString();
-    const initialPrompt = `我想去 ${prefs.destinations} 玩 ${prefs.days} 天，主打${prefs.vibe}，和${prefs.companions}一起。
+    const initialPrompt = `我从${prefs.departureCity}出发，${prefs.dateText}去${prefs.destinations}玩${prefs.days}天，主打${prefs.vibe}，和${prefs.companions}一起。
+${prefs.peopleCount ? `- 人数：${prefs.peopleCount}人\n` : ''}${prefs.budget ? `- 总预算：${prefs.budget}\n` : ''}${prefs.transportPreference ? `- 交通偏好：${prefs.transportPreference}\n` : ''}${prefs.hotelPreference ? `- 酒店偏好：${prefs.hotelPreference}\n` : ''}${prefs.diningPreference ? `- 餐饮偏好：${prefs.diningPreference}\n` : ''}${prefs.pace ? `- 行程节奏：${prefs.pace}\n` : ''}${prefs.mustVisit ? `- 必去景点：${prefs.mustVisit}\n` : ''}${prefs.avoidPlaces ? `- 避免事项：${prefs.avoidPlaces}\n` : ''}
 【我的长期旅行偏好】：
 - 行程节奏：${userPrefs.travelStyle}
 - 住宿要求：${userPrefs.accommodationType}
@@ -152,7 +168,14 @@ ${prefs.additionalNotes ? '【本次特别说明】：' + prefs.additionalNotes 
     setCurrentSessionId(newSessionId);
 
     try {
-      const result = await generateItinerary(initialPrompt, [], { sessionId: newSessionId });
+      const result = await generateItinerary(initialPrompt, [], {
+        sessionId: newSessionId,
+        onStreamEvent: (eventName, data) => {
+          if (eventName === 'stage' || eventName === 'partial_text') {
+            updateLoadingStage(newSessionId, loadingMsg.id, data);
+          }
+        }
+      });
       setSessions(prev => prev.map(s => {
         if (s.id === newSessionId) {
           return {
@@ -216,7 +239,14 @@ ${prefs.additionalNotes ? '【本次特别说明】：' + prefs.additionalNotes 
       
       const newHistory = updatedSession.history.slice(0, -1); 
 
-      generateItinerary(text, newHistory, { sessionId: currentSessionId })
+      generateItinerary(text, newHistory, {
+        sessionId: currentSessionId,
+        onStreamEvent: (eventName, data) => {
+          if (eventName === 'stage' || eventName === 'partial_text') {
+            updateLoadingStage(currentSessionId, loadingMsg.id, data);
+          }
+        }
+      })
       .then(result => {
         setSessions(currentSessions => currentSessions.map(s => {
           if (s.id === currentSessionId) {

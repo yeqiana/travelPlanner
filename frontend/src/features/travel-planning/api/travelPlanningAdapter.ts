@@ -21,6 +21,7 @@ export function adaptTravelPlanResponse(response: TravelPlanResponse): Itinerary
       days: [],
       tips: questions,
       assistantReply,
+      contextualSuggestions: response.contextualSuggestions || [],
     };
   }
 
@@ -36,6 +37,7 @@ export function adaptTravelPlanResponse(response: TravelPlanResponse): Itinerary
     days: (plan.dailyPlans || []).map(adaptDailyPlan),
     tips: collectTips(response),
     assistantReply: buildAssistantReply(plan, imageBrief),
+    contextualSuggestions: response.contextualSuggestions || [],
     routeLine: collectRouteLine(response),
     dayCards: collectDayCards(response),
     riskTags: collectRiskTags(response),

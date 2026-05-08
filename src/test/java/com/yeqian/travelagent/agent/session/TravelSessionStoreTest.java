@@ -1,8 +1,12 @@
 package com.yeqian.travelagent.agent.session;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.yeqian.travelagent.application.dto.TravelPlanResponse;
+import com.yeqian.travelagent.domain.enums.FatigueLevel;
 import com.yeqian.travelagent.domain.model.ClarificationQuestion;
+import com.yeqian.travelagent.domain.model.DailyPlan;
 import com.yeqian.travelagent.domain.model.TravelIntent;
+import com.yeqian.travelagent.domain.model.TravelPlan;
 import com.yeqian.travelagent.domain.model.TravelSessionContext;
 import com.yeqian.travelagent.infrastructure.config.TravelAgentProperties;
 import com.yeqian.travelagent.infrastructure.persistence.entity.TravelSessionEntity;
@@ -14,12 +18,12 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -83,19 +87,52 @@ class TravelSessionStoreTest {
     }
 
     /**
-     * 验证已完成会话不会被恢复，也不会再次标记完成。
+     * 验证已完成会话可以被恢复，用于后续细化和调整计划。
      */
     @Test
-    void shouldIgnoreCompletedSession() throws Exception {
+    void shouldRecoverCompletedSessionForFollowUpAdjustment() throws Exception {
         TravelSessionMapper mapper = mock(TravelSessionMapper.class);
         TravelSessionEntity entity = entity("session-completed", "COMPLETED", LocalDateTime.now().plusHours(1));
         when(mapper.findBySessionId("session-completed")).thenReturn(Optional.of(entity));
         TravelSessionStore store = store(mapper, 24);
 
-        assertThat(store.findBySessionId("session-completed")).isNull();
+        TravelSessionContext context = store.findBySessionId("session-completed");
+
+        assertThat(context).isNotNull();
+        assertThat(context.status()).isEqualTo("COMPLETED");
         store.markCompleted("session-completed", intent("杭州"));
 
-        verify(mapper, never()).markCompleted(any(), any(), any());
+        verify(mapper).markCompleted(any(), any(), any(), any(), any());
+    }
+
+    /**
+     * 验证完成态会话会保存上一轮完整计划上下文。
+     *
+     * @throws Exception JSON 序列化异常
+     */
+    @Test
+    void shouldSavePreviousPlanContextWhenCompletedResponseExists() throws Exception {
+        TravelSessionMapper mapper = mock(TravelSessionMapper.class);
+        TravelSessionEntity entity = entity("session-completed", "COMPLETED", LocalDateTime.now().plusHours(1));
+        when(mapper.findBySessionId("session-completed")).thenReturn(Optional.of(entity));
+        TravelPlanResponse response = TravelPlanResponse.completed(
+                "session-completed",
+                intent("杭州"),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                plan(),
+                List.of(),
+                null
+        ).withPlanId("plan-1");
+        ArgumentCaptor<String> responseJsonCaptor = ArgumentCaptor.forClass(String.class);
+
+        store(mapper, 24).markCompleted("session-completed", response);
+
+        verify(mapper).markCompleted(any(), any(), responseJsonCaptor.capture(), any(), any());
+        assertThat(responseJsonCaptor.getValue()).contains("plan-1", "recommendedPlan", "杭州");
     }
 
     /**
@@ -171,5 +208,24 @@ class TravelSessionStoreTest {
      */
     private ClarificationQuestion question(String field) {
         return new ClarificationQuestion(field, "请补充" + field, "示例", true);
+    }
+
+    /**
+     * 构造测试用旅行计划。
+     *
+     * @return 旅行计划
+     */
+    private TravelPlan plan() {
+        return new TravelPlan(
+                "杭州2日游",
+                "测试计划",
+                List.of("西安", "杭州"),
+                List.of(new DailyPlan(1, "杭州", "09:00 西湖", "14:00 灵隐寺", "18:00 湖滨晚餐", FatigueLevel.MEDIUM, List.of())),
+                List.of("高铁往返"),
+                List.of("住西湖附近"),
+                Map.of("total", 3000),
+                List.of("节假日人流需确认"),
+                List.of("确认门票")
+        );
     }
 }

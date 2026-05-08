@@ -456,17 +456,18 @@ BUILD SUCCESS
 - 移动端视觉检查项已纳入 P4 收口验收范围。
 - 已做代码级走查并完成 P4 范围内的小修复：`routeLine` 改为小屏换行，`dayCards`、`riskTags`、`reminderCards` 增加长文本断词，降低移动端溢出风险。
 - 已通过 `npm run lint` 和 `npm run build` 验证样式修复不破坏前端构建。
-- 浏览器插件截图走查未执行：当前插件运行时要求 Node.js `>= v22.22.0`，项目基线固定为 `v20.20.2`，本阶段不为插件升级 Node。
+- 已补充浏览器插件视觉走查：Codex 浏览器插件使用 Node.js `v22.22.0` 作为工具运行时，项目前端基线仍固定为 `v20.20.2`。
 
 ## 10. P4 收口验证记录
 
-验证时间：2026-04-30。
+验证时间：2026-04-30；补充浏览器插件验收时间：2026-05-01。
 
 前端环境检查：
 
 - `node -v`：`v20.20.2`。
 - `npm run lint`：通过，执行 `tsc --noEmit`。
 - `npm run build`：通过，Vite 构建成功；存在 chunk 超过 500 kB 的提示，不影响 P4 构建通过。
+- 2026-05-01 补充浏览器插件验收后已切回项目基线 `v20.20.2`，并重新通过 `node -v`、`npm run lint`、`npm run build`。
 
 本地联调检查：
 
@@ -476,10 +477,22 @@ BUILD SUCCESS
 - 缺少出发地接口验证通过：`needClarification=true`，返回 `clarificationQuestions` 和 `structuredClarificationQuestions`，不返回推荐方案。
 - 补充出发地接口验证通过：前端应携带上一轮 `sessionId`；接口侧验证同一 `sessionId` 可合并上下文，并在信息完整后返回推荐方案。
 
+浏览器插件验收：
+
+- Codex 浏览器插件运行时使用 Node.js `v22.22.0`；验收完成后仍以项目基线 `v20.20.2` 执行前端检查。
+- 验收地址：`http://localhost:3000`。
+- 验收视口：Codex in-app browser 当前窄屏视口，接近移动端展示；页面外层保持居中移动端 WebApp 宽度。
+- 完整旅行需求验收通过：页面展示推荐方案、`routeLine`、`dayCards`、`riskTags`、`reminderCards`，未发现空白主区域。
+- 缺少出发地验收通过：页面展示“需要补充信息”和出发地追问，不展示 `routeLine` / `dayCards` 推荐方案。
+- 补充出发地验收通过：同一会话输入“我从西安出发，想去杭州上海周边”后，页面切换到计划展示状态，并展示路线、每日安排、风险提示和提醒。
+- 移动端视觉检查通过：当前插件视口下未发现明显横向滚动、按钮溢出、风险标签重叠或提醒卡片重叠。
+- 控制台检查通过：浏览器插件未捕获到 error / warn 日志。
+- 异常文案检查通过：DOM 中未发现 `undefined` / `null` / `[object Object]`。
+
 未验证项：
 
-- 未执行浏览器插件截图验收；原因是插件运行时要求 Node.js `>= v22.22.0`，而项目前端基线固定为 `v20.20.2`，本阶段不为插件升级 Node。
-- `imageBrief` 为空或字段不完整的页面级 fallback 未通过浏览器截图验证；当前以前端适配逻辑、lint 和 build 作为收口验证依据。
+- 未单独构造 `imageBrief` 为空或字段不完整的真实后端响应；该项仍以前端 fallback 适配逻辑、浏览器主流程展示、`npm run lint` 和 `npm run build` 作为 P4 收口依据。
+- 未使用独立桌面宽屏视口截图；当前页面设计为移动端 WebApp 容器，浏览器插件验收以当前 in-app browser 视口和移动端容器展示为准。
 
 ## 11. 下一阶段建议
 

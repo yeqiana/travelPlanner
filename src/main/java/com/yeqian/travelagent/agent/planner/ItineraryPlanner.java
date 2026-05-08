@@ -24,6 +24,20 @@ import java.util.Map;
 @Component
 public class ItineraryPlanner {
 
+    private static final Map<String, List<String>> CITY_ATTRACTIONS = Map.of(
+            "杭州", List.of("西湖苏堤", "灵隐寺", "河坊街"),
+            "上海", List.of("外滩", "豫园", "陆家嘴"),
+            "西安", List.of("陕西历史博物馆", "大雁塔", "回民街"),
+            "宝鸡", List.of("法门寺文化景区", "太白山游客中心", "陈仓老街")
+    );
+
+    private static final Map<String, String> CITY_RESTAURANTS = Map.of(
+            "杭州", "湖滨银泰或河坊街周边餐厅",
+            "上海", "南京东路或豫园周边餐厅",
+            "西安", "大雁塔或回民街周边餐厅",
+            "宝鸡", "陈仓老街周边餐厅"
+    );
+
     /**
      * 生成最终旅行计划。
      *
@@ -139,17 +153,91 @@ public class ItineraryPlanner {
             boolean lastDay = day == days;
             TravelEvidence attraction = firstAttractionEvidence(city, evidences);
             String attractionName = attractionName(attraction, city);
+            List<String> places = dayPlaces(city, attractionName);
             dailyPlans.add(new DailyPlan(
                     day,
                     city,
-                    firstDay ? "抵达" + city + "，办理入住或寄存行李" : city + "核心景点游览",
-                    lastDay ? "预留返程交通和退房时间" : attractionName + "游览",
-                    lastDay ? "返程或轻松收尾" : "安排本地餐食和夜间轻量活动",
+                    buildMorningPlan(city, places, firstDay),
+                    buildAfternoonPlan(city, places, attractionName, lastDay),
+                    buildEveningPlan(city, places, lastDay),
                     fatigueLevel(day, days),
                     notes(day, firstDay, lastDay, attraction)
             ));
         }
         return dailyPlans;
+    }
+
+    /**
+     * 构造上午详细安排。
+     *
+     * @param city 当前城市
+     * @param places 当天候选地点
+     * @param firstDay 是否第一天
+     * @return 上午详细安排
+     */
+    private String buildMorningPlan(String city, List<String> places, boolean firstDay) {
+        if (firstDay) {
+            return "08:30-10:00 抵达或从酒店出发前往" + places.get(0) + "，建议地铁/打车，预计30-60分钟；"
+                    + "10:00-12:00 游览" + places.get(0) + "，开放和预约信息需二次确认。";
+        }
+        return "09:00-11:30 前往" + places.get(0) + "，建议地铁/打车，预计游览2.5小时；"
+                + "11:30-12:30 在" + places.get(0) + "附近午餐，餐厅排队情况需二次确认。";
+    }
+
+    /**
+     * 构造下午详细安排。
+     *
+     * @param city 当前城市
+     * @param places 当天候选地点
+     * @param attractionName 证据推荐景点
+     * @param lastDay 是否最后一天
+     * @return 下午详细安排
+     */
+    private String buildAfternoonPlan(String city, List<String> places, String attractionName, boolean lastDay) {
+        if (lastDay) {
+            return "13:30-15:30 前往" + places.get(1) + "或" + attractionName + "做低强度补充游览，建议预留行李寄存时间；"
+                    + "15:30-17:00 返回酒店/车站区域，交通耗时需按当天路况二次确认。";
+        }
+        return "13:30-16:30 游览" + places.get(1) + "和" + attractionName + "，建议提前确认门票/预约，预计3小时；"
+                + "16:30-17:30 前往" + places.get(2) + "周边休整。";
+    }
+
+    /**
+     * 构造晚上详细安排。
+     *
+     * @param city 当前城市
+     * @param places 当天候选地点
+     * @param lastDay 是否最后一天
+     * @return 晚上详细安排
+     */
+    private String buildEveningPlan(String city, List<String> places, boolean lastDay) {
+        String restaurant = CITY_RESTAURANTS.getOrDefault(city, city + "当地特色餐厅");
+        if (lastDay) {
+            return "18:00-19:00 在" + restaurant + "用餐或打包简餐；19:00-20:30 前往返程交通点，班次和进站时间需二次确认。";
+        }
+        return "18:30-20:00 在" + restaurant + "晚餐；20:00-21:00 步行体验" + places.get(2) + "夜间街区，随后返回酒店休息。";
+    }
+
+    /**
+     * 获取当天可用地点列表。
+     *
+     * @param city 当前城市
+     * @param attractionName 证据推荐景点
+     * @return 至少三个地点名称
+     */
+    private List<String> dayPlaces(String city, String attractionName) {
+        List<String> places = new ArrayList<>(CITY_ATTRACTIONS.getOrDefault(city, List.of(
+                city + "城市地标候选点",
+                city + "博物馆或公园候选点",
+                city + "特色街区候选点"
+        )));
+        if (!isBlank(attractionName) && !attractionName.equals(city) && !places.contains(attractionName)) {
+            places.set(1, attractionName);
+        }
+        while (places.size() < 3) {
+            places.add(city + "待确认地点" + places.size());
+        }
+        return places;
     }
 
     /**

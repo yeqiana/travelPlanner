@@ -48,6 +48,14 @@ public class MissingInfoChecker {
                     true
             ));
         }
+        if (intent == null || intent.destinationPreferences().isEmpty()) {
+            structuredQuestions.add(new ClarificationQuestion(
+                    "destinationPreferences",
+                    "你想去哪个目的地或偏好哪类目的地？",
+                    "例如：杭州、上海周边、海边城市",
+                    true
+            ));
+        }
 
         List<String> questions = structuredQuestions.stream()
                 .map(ClarificationQuestion::question)

@@ -22,6 +22,8 @@ export interface TravelPlanResponse {
   imageBrief?: BackendImageBrief | null;
   reminders?: BackendTravelReminder[];
   risks?: string[];
+  dialogIntent?: string | null;
+  contextualSuggestions?: string[];
   createdAt?: string;
 }
 
@@ -121,4 +123,5 @@ export interface BackendImageBriefReminderCard {
 
 export interface GenerateItineraryOptions {
   sessionId?: string;
+  onStreamEvent?: (eventName: string, data: string) => void;
 }

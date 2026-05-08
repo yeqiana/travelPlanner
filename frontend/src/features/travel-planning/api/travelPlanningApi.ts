@@ -1,5 +1,6 @@
 import { ChatMessage, Itinerary, TravelPreferences } from '../../../shared/types/travel';
 import { generateItineraryWithBackend } from './backendTravelPlanningProvider';
+import { generateItineraryWithStream } from './streamTravelPlanningProvider';
 import { GenerateItineraryOptions } from './travelPlanningTypes';
 
 export function generateItinerary(
@@ -7,5 +8,6 @@ export function generateItinerary(
   history: ChatMessage[] = [],
   options: GenerateItineraryOptions = {},
 ): Promise<Itinerary> {
-  return generateItineraryWithBackend(input, history, options);
+  return generateItineraryWithStream(input, history, options)
+    .catch(() => generateItineraryWithBackend(input, history, options));
 }

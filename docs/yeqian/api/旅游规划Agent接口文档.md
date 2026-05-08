@@ -61,6 +61,8 @@
       "title": "杭州 + 上海低疲劳精选 4天旅行计划"
     },
     "risks": ["车票/酒店价格需二次确认。"],
+    "dialogIntent": "CREATE_PLAN",
+    "contextualSuggestions": ["调整第2天节奏", "补充预算范围", "换一些杭州餐厅"],
     "createdAt": "2026-04-27T21:53:36+08:00"
   }
 }
@@ -73,9 +75,25 @@
 
 `POST /api/travel/plans/stream`
 
-当前状态：未实现。  
-可用性：不可用。  
-是否需要修复：Phase 9 不新增大功能，暂不补 SSE。
+当前状态：已实现基础 SSE。  
+可用性：可用。  
+说明：接口会返回阶段事件，完成后返回完整 `TravelPlanResponse`。
+
+事件类型：
+
+- `stage`：阶段性进度文本。
+- `completed`：完整统一响应，结构为 `Result<TravelPlanResponse>`。
+- `error`：流式生成失败信息。
+
+示例事件：
+
+```text
+event: stage
+data: 正在理解旅行需求
+
+event: completed
+data: {"code":0,"message":"success","data":{...}}
+```
 
 ## 3. 查询历史旅行计划
 
@@ -151,7 +169,7 @@ curl -X POST "http://localhost:8080/api/ai/chat" `
 ## 已知限制
 
 - 不承诺真实余票、酒店价格和景点预约名额准确。
-- 未实现 SSE 流式接口。
+- 已实现基础 SSE 流式接口，但前端默认仍可继续使用非流式接口。
 - 未接真实票务下单、酒店预订、地图深度路线规划。
 - 数据库保存失败时主接口会失败，不会返回未落库的计划。
 
@@ -208,10 +226,17 @@ curl -X POST "http://localhost:8080/api/ai/chat" `
         }
       ]
     },
-    "risks": ["节假日人流和票务风险需提前确认"]
+    "risks": ["节假日人流和票务风险需提前确认"],
+    "dialogIntent": "CREATE_PLAN",
+    "contextualSuggestions": ["调整第2天节奏", "补充预算范围", "换一些杭州餐厅"]
   }
 }
 ```
+
+新增交互辅助字段：
+
+- `dialogIntent`：本轮多轮对话意图，常见值包括 `CREATE_PLAN`、`DETAIL_PLAN`、`REGENERATE_PLAN`、`ADJUST_PLAN`、`ADD_CONSTRAINT`、`ANSWER_CLARIFICATION`。
+- `contextualSuggestions`：上下文快捷提示，前端优先展示；为空时可回退到固定提示。
 
 追问响应示例：
 

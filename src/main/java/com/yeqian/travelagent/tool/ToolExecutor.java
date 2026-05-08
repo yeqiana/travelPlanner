@@ -3,6 +3,8 @@ package com.yeqian.travelagent.tool;
 import com.yeqian.travelagent.domain.model.ToolResult;
 import com.yeqian.travelagent.domain.model.TravelTask;
 import jakarta.annotation.Resource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.annotation.AnnotationAwareOrderComparator;
 import org.springframework.stereotype.Component;
 
@@ -18,6 +20,8 @@ import java.util.Optional;
 @Component
 public class ToolExecutor {
 
+    private static final Logger log = LoggerFactory.getLogger(ToolExecutor.class);
+
     @Resource
     private List<TravelTool> travelTools;
 
@@ -29,8 +33,10 @@ public class ToolExecutor {
      */
     public List<ToolResult> execute(List<TravelTask> tasks) {
         if (tasks == null || tasks.isEmpty()) {
+            log.info("工具执行跳过：无查询任务");
             return List.of();
         }
+        log.info("工具批量执行开始：taskCount={}", tasks.size());
         return tasks.stream().map(this::executeOne).toList();
     }
 
@@ -48,13 +54,31 @@ public class ToolExecutor {
                 .filter(tool -> tool.supports(task.taskType()))
                 .findFirst();
         if (toolOptional.isEmpty()) {
+            log.warn("工具匹配失败：taskType={}, city={}, query={}", task.taskType(), task.city(), task.query());
             return failure(task, "ToolExecutor", "未找到匹配的旅行工具：" + task.taskType());
         }
 
         TravelTool tool = toolOptional.get();
+        long startMillis = System.currentTimeMillis();
         try {
-            return tool.execute(task);
+            log.info("工具执行开始：source={}, taskType={}, city={}, query={}", tool.source(), task.taskType(), task.city(), task.query());
+            ToolResult result = tool.execute(task);
+            log.info("工具执行结束：source={}, taskType={}, city={}, success={}, costMillis={}, error={}",
+                    tool.source(),
+                    task.taskType(),
+                    task.city(),
+                    result.success(),
+                    System.currentTimeMillis() - startMillis,
+                    result.errorMessage());
+            return result;
         } catch (Exception exception) {
+            log.warn("工具执行异常：source={}, taskType={}, city={}, costMillis={}, error={}",
+                    tool.source(),
+                    task.taskType(),
+                    task.city(),
+                    System.currentTimeMillis() - startMillis,
+                    exception.getMessage(),
+                    exception);
             return failure(task, tool.source(), exception.getMessage());
         }
     }

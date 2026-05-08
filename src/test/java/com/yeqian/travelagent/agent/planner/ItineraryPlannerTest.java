@@ -36,6 +36,7 @@ class ItineraryPlannerTest {
         TravelPlan plan = planner.generate(intent, List.of(scoredPlan), List.of());
 
         assertThat(plan.dailyPlans()).hasSize(4);
+        assertThat(plan.dailyPlans().get(0).morning()).contains("08:30", "10:00", "需二次确认");
         assertThat(plan.risks()).isNotEmpty();
         assertThat(plan.budgetEstimate()).containsKeys("transport", "hotel", "total");
         assertThat(plan.transportSuggestions()).isNotEmpty();
@@ -78,6 +79,22 @@ class ItineraryPlannerTest {
         assertThat(plan.risks()).anySatisfy(risk -> assertThat(risk).contains("二次确认"));
         assertThat(plan.todoList()).anySatisfy(todo -> assertThat(todo).contains("预约"));
         assertThat(String.join("；", plan.risks())).doesNotContain("余票充足", "实时票价");
+    }
+
+    /**
+     * 验证常见城市会生成带时间、地点和耗时提示的详细行程。
+     */
+    @Test
+    void shouldGenerateDetailedScheduleForKnownCities() {
+        TravelIntent intent = new TravelIntent("西安", "五一", 2, 2, BigDecimal.valueOf(3000), List.of("宝鸡"), List.of("不想太累"), null, null, List.of());
+        TravelCandidatePlan candidate = new TravelCandidatePlan("宝鸡低疲劳精选", List.of("西安", "宝鸡", "西安"), "低疲劳");
+        TravelScore score = new TravelScore(88, 90, 86, 85, 88, 80, 78, "推荐");
+
+        TravelPlan plan = planner.generate(intent, List.of(new ScoredTravelPlan(candidate, score)), List.of());
+        String dayText = plan.dailyPlans().get(0).morning() + plan.dailyPlans().get(0).afternoon() + plan.dailyPlans().get(0).evening();
+
+        assertThat(dayText).contains("法门寺文化景区", "陈仓老街", "预计");
+        assertThat(dayText).doesNotContain("核心景点游览", "自由活动", "轻松收尾");
     }
 
     /**

@@ -42,6 +42,7 @@ export interface Itinerary {
   days: DayPlan[];
   tips: string[];
   assistantReply?: string;
+  contextualSuggestions?: string[];
   routeLine?: string[];
   dayCards?: DayCard[];
   riskTags?: string[];
@@ -58,10 +59,20 @@ export interface UserPreferences {
 }
 
 export interface TravelPreferences {
+  departureCity: string;
+  dateText: string;
   destinations: string;
   days: number;
   vibe: string;
   companions: string;
+  peopleCount?: number;
+  budget?: string;
+  transportPreference?: string;
+  hotelPreference?: string;
+  diningPreference?: string;
+  pace?: string;
+  mustVisit?: string;
+  avoidPlaces?: string;
   additionalNotes?: string;
 }
 

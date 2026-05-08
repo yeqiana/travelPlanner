@@ -36,10 +36,35 @@ function buildMessage(input: TravelPreferences | string, history: ChatMessage[])
   if (typeof input === 'string') return input;
 
   const parts = [
-    `我想去${input.destinations}玩${input.days}天`,
+    `我从${input.departureCity}出发`,
+    `${input.dateText}去${input.destinations}玩${input.days}天`,
     `主打${input.vibe}`,
     `和${input.companions}一起`,
   ];
+  if (input.peopleCount && input.peopleCount > 0) {
+    parts.push(`${input.peopleCount}个人`);
+  }
+  if (input.budget) {
+    parts.push(`总预算${input.budget}`);
+  }
+  if (input.transportPreference) {
+    parts.push(`交通偏好${input.transportPreference}`);
+  }
+  if (input.hotelPreference) {
+    parts.push(`酒店偏好${input.hotelPreference}`);
+  }
+  if (input.diningPreference) {
+    parts.push(`餐饮偏好${input.diningPreference}`);
+  }
+  if (input.pace) {
+    parts.push(`行程节奏${input.pace}`);
+  }
+  if (input.mustVisit) {
+    parts.push(`必去景点：${input.mustVisit}`);
+  }
+  if (input.avoidPlaces) {
+    parts.push(`想避开：${input.avoidPlaces}`);
+  }
   if (input.additionalNotes) {
     parts.push(`补充要求：${input.additionalNotes}`);
   }

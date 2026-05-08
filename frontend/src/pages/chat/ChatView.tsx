@@ -14,6 +14,14 @@ export function ChatView({ history, onSend }: { history: ChatMessage[], onSend: 
   const [routeMapData, setRouteMapData] = useState<Itinerary | null>(null);
   const [itineraryShareData, setItineraryShareData] = useState<Itinerary | null>(null);
   const endOfMessagesRef = useRef<HTMLDivElement>(null);
+  const latestSuggestions = history
+    .slice()
+    .reverse()
+    .find(message => message.role === 'assistant' && !message.isLoading)
+    ?.itinerary?.contextualSuggestions;
+  const quickSuggestions = latestSuggestions && latestSuggestions.length > 0
+    ? latestSuggestions
+    : ['增加一天行程', '换一些餐厅', '太累了，减少些景点'];
 
   useEffect(() => {
     endOfMessagesRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -47,11 +55,14 @@ export function ChatView({ history, onSend }: { history: ChatMessage[], onSend: 
                 </div>
                 <div className="text-[16px] leading-relaxed text-gray-900 px-1">
                   {msg.isLoading ? (
-                    <div className="flex items-center gap-2 text-gray-400 h-6">
-                      <div className="flex gap-1.5 opacity-80">
-                        <motion.div animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }} transition={{ duration: 1, repeat: Infinity }} className="w-2.5 h-2.5 bg-gray-400 rounded-full" />
-                        <motion.div animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }} transition={{ duration: 1, repeat: Infinity, delay: 0.2 }} className="w-2.5 h-2.5 bg-gray-400 rounded-full" />
-                        <motion.div animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }} transition={{ duration: 1, repeat: Infinity, delay: 0.4 }} className="w-2.5 h-2.5 bg-gray-400 rounded-full" />
+                    <div className="flex items-center gap-3 text-gray-500 min-h-6">
+                      <span className="text-[14px] font-semibold leading-relaxed break-words">
+                        {msg.text || '正在生成旅行计划'}
+                      </span>
+                      <div className="flex shrink-0 gap-1.5 opacity-80">
+                        <motion.div animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }} transition={{ duration: 1, repeat: Infinity }} className="w-2 h-2 bg-gray-400 rounded-full" />
+                        <motion.div animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }} transition={{ duration: 1, repeat: Infinity, delay: 0.2 }} className="w-2 h-2 bg-gray-400 rounded-full" />
+                        <motion.div animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }} transition={{ duration: 1, repeat: Infinity, delay: 0.4 }} className="w-2 h-2 bg-gray-400 rounded-full" />
                       </div>
                     </div>
                   ) : (
@@ -106,7 +117,7 @@ export function ChatView({ history, onSend }: { history: ChatMessage[], onSend: 
         <form onSubmit={handleSubmit} className="flex flex-col relative max-w-3xl mx-auto w-full pt-2">
           {!history[history.length - 1]?.isLoading && history[history.length - 1]?.role !== 'user' && (
             <div className="flex gap-2 overflow-x-auto no-scrollbar pb-3 mb-1">
-              {['增加一天行程', '换一些餐厅', '太累了，减少些景点'].map((suggestion) => (
+              {quickSuggestions.map((suggestion) => (
                 <button
                   key={suggestion}
                   type="button"

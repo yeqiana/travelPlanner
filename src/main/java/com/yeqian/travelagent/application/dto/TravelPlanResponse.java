@@ -10,6 +10,7 @@ import com.yeqian.travelagent.domain.model.TravelIntent;
 import com.yeqian.travelagent.domain.model.TravelPlan;
 import com.yeqian.travelagent.domain.model.TravelReminder;
 import com.yeqian.travelagent.domain.model.TravelTask;
+import com.yeqian.travelagent.domain.enums.TravelDialogIntent;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
@@ -37,6 +38,8 @@ import java.util.List;
  * @param reminders 旅行提醒列表
  * @param imageBrief 一图流文案
  * @param risks 风险提示列表
+ * @param dialogIntent 本轮多轮对话意图
+ * @param contextualSuggestions 上下文快捷提示列表
  * @param createdAt 响应创建时间
  */
 @Schema(description = "旅行计划响应", example = """
@@ -130,6 +133,10 @@ public record TravelPlanResponse(
         ImageBrief imageBrief,
         @Schema(description = "风险提示列表")
         List<String> risks,
+        @Schema(description = "本轮多轮对话意图", example = "DETAIL_PLAN", nullable = true)
+        TravelDialogIntent dialogIntent,
+        @Schema(description = "上下文快捷提示列表")
+        List<String> contextualSuggestions,
         @Schema(description = "响应创建时间")
         OffsetDateTime createdAt
 ) {
@@ -147,6 +154,7 @@ public record TravelPlanResponse(
         scoredPlans = scoredPlans == null ? List.of() : List.copyOf(scoredPlans);
         reminders = reminders == null ? List.of() : List.copyOf(reminders);
         risks = risks == null ? List.of() : List.copyOf(risks);
+        contextualSuggestions = contextualSuggestions == null ? List.of() : List.copyOf(contextualSuggestions);
         createdAt = createdAt == null ? OffsetDateTime.now() : createdAt;
     }
 
@@ -176,7 +184,7 @@ public record TravelPlanResponse(
             List<ClarificationQuestion> structuredQuestions,
             TravelIntent intent
     ) {
-        return new TravelPlanResponse(null, sessionId, true, questions, structuredQuestions, intent, List.of(), List.of(), List.of(), List.of(), List.of(), null, null, List.of(), null, List.of(), OffsetDateTime.now());
+        return new TravelPlanResponse(null, sessionId, true, questions, structuredQuestions, intent, List.of(), List.of(), List.of(), List.of(), List.of(), null, null, List.of(), null, List.of(), null, List.of(), OffsetDateTime.now());
     }
 
     /**
@@ -186,7 +194,7 @@ public record TravelPlanResponse(
      * @return 旅行计划响应
      */
     public static TravelPlanResponse parsed(TravelIntent intent) {
-        return new TravelPlanResponse(null, null, false, List.of(), List.of(), intent, List.of(), List.of(), List.of(), List.of(), List.of(), null, null, List.of(), null, List.of(), OffsetDateTime.now());
+        return new TravelPlanResponse(null, null, false, List.of(), List.of(), intent, List.of(), List.of(), List.of(), List.of(), List.of(), null, null, List.of(), null, List.of(), null, List.of(), OffsetDateTime.now());
     }
 
     /**
@@ -197,7 +205,7 @@ public record TravelPlanResponse(
      * @return 旅行计划响应
      */
     public static TravelPlanResponse planned(TravelIntent intent, List<TravelTask> tasks) {
-        return new TravelPlanResponse(null, null, false, List.of(), List.of(), intent, tasks, List.of(), List.of(), List.of(), List.of(), null, null, List.of(), null, List.of(), OffsetDateTime.now());
+        return new TravelPlanResponse(null, null, false, List.of(), List.of(), intent, tasks, List.of(), List.of(), List.of(), List.of(), null, null, List.of(), null, List.of(), null, List.of(), OffsetDateTime.now());
     }
 
     /**
@@ -209,7 +217,7 @@ public record TravelPlanResponse(
      * @return 旅行计划响应
      */
     public static TravelPlanResponse toolsExecuted(TravelIntent intent, List<TravelTask> tasks, List<ToolResult> toolResults) {
-        return new TravelPlanResponse(null, null, false, List.of(), List.of(), intent, tasks, toolResults, List.of(), List.of(), List.of(), null, null, List.of(), null, List.of(), OffsetDateTime.now());
+        return new TravelPlanResponse(null, null, false, List.of(), List.of(), intent, tasks, toolResults, List.of(), List.of(), List.of(), null, null, List.of(), null, List.of(), null, List.of(), OffsetDateTime.now());
     }
 
     /**
@@ -232,7 +240,7 @@ public record TravelPlanResponse(
             List<ScoredTravelPlan> scoredPlans
     ) {
         ScoredTravelPlan bestPlan = firstScoredPlan(scoredPlans);
-        return new TravelPlanResponse(null, null, false, List.of(), List.of(), intent, tasks, toolResults, evidences, candidatePlans, scoredPlans, null, bestPlan, List.of(), null, List.of(), OffsetDateTime.now());
+        return new TravelPlanResponse(null, null, false, List.of(), List.of(), intent, tasks, toolResults, evidences, candidatePlans, scoredPlans, null, bestPlan, List.of(), null, List.of(), null, List.of(), OffsetDateTime.now());
     }
 
     /**
@@ -307,7 +315,40 @@ public record TravelPlanResponse(
                 reminders,
                 imageBrief,
                 recommendedPlan == null ? List.of() : recommendedPlan.risks(),
+                null,
+                List.of(),
                 OffsetDateTime.now()
+        );
+    }
+
+    /**
+     * 复制当前响应并写入多轮意图和快捷提示。
+     *
+     * @param dialogIntent 本轮多轮对话意图
+     * @param contextualSuggestions 上下文快捷提示列表
+     * @return 带交互辅助信息的旅行计划响应
+     */
+    public TravelPlanResponse withInteraction(TravelDialogIntent dialogIntent, List<String> contextualSuggestions) {
+        return new TravelPlanResponse(
+                planId,
+                sessionId,
+                needClarification,
+                clarificationQuestions,
+                structuredClarificationQuestions,
+                intent,
+                tasks,
+                toolResults,
+                evidences,
+                candidatePlans,
+                scoredPlans,
+                recommendedPlan,
+                score,
+                reminders,
+                imageBrief,
+                risks,
+                dialogIntent,
+                contextualSuggestions,
+                createdAt
         );
     }
 
@@ -335,6 +376,8 @@ public record TravelPlanResponse(
                 reminders,
                 imageBrief,
                 risks,
+                dialogIntent,
+                contextualSuggestions,
                 createdAt
         );
     }

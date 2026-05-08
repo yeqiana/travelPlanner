@@ -17,6 +17,8 @@ public class TravelSessionEntity {
 
     private String lastQuestionsJson;
 
+    private String lastResponseJson;
+
     private LocalDateTime expiresAt;
 
     private LocalDateTime createdAt;
@@ -93,6 +95,24 @@ public class TravelSessionEntity {
      */
     public void setLastQuestionsJson(String lastQuestionsJson) {
         this.lastQuestionsJson = lastQuestionsJson;
+    }
+
+    /**
+     * 获取上一轮完整计划上下文 JSON。
+     *
+     * @return 上一轮完整计划上下文 JSON
+     */
+    public String getLastResponseJson() {
+        return lastResponseJson;
+    }
+
+    /**
+     * 设置上一轮完整计划上下文 JSON。
+     *
+     * @param lastResponseJson 上一轮完整计划上下文 JSON
+     */
+    public void setLastResponseJson(String lastResponseJson) {
+        this.lastResponseJson = lastResponseJson;
     }
 
     /**

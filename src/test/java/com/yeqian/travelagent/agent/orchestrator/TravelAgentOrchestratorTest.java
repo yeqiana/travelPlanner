@@ -1,9 +1,11 @@
 package com.yeqian.travelagent.agent.orchestrator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.yeqian.travelagent.agent.adjuster.TravelPlanLocalAdjuster;
 import com.yeqian.travelagent.agent.checker.MissingInfoChecker;
 import com.yeqian.travelagent.agent.generator.ImageBriefGenerator;
 import com.yeqian.travelagent.agent.generator.ReminderGenerator;
+import com.yeqian.travelagent.agent.intent.TravelDialogIntentRecognizer;
 import com.yeqian.travelagent.agent.normalizer.EvidenceNormalizer;
 import com.yeqian.travelagent.agent.parser.TravelIntentParser;
 import com.yeqian.travelagent.agent.planner.CandidatePlanGenerator;
@@ -11,6 +13,7 @@ import com.yeqian.travelagent.agent.planner.ItineraryPlanner;
 import com.yeqian.travelagent.agent.planner.TravelTaskPlanner;
 import com.yeqian.travelagent.agent.scorer.TravelScorer;
 import com.yeqian.travelagent.agent.session.TravelSessionStore;
+import com.yeqian.travelagent.agent.suggestion.ContextualSuggestionGenerator;
 import com.yeqian.travelagent.application.dto.TravelPlanRequest;
 import com.yeqian.travelagent.application.dto.TravelPlanResponse;
 import com.yeqian.travelagent.infrastructure.ai.JsonExtractor;
@@ -64,6 +67,7 @@ class TravelAgentOrchestratorTest {
         assertThat(response.imageBrief()).isNotNull();
         assertThat(response.imageBrief().sections()).isNotEmpty();
         assertThat(response.recommendedPlan().risks()).isNotEmpty();
+        assertThat(response.contextualSuggestions()).isNotEmpty();
     }
 
     /**
@@ -100,6 +104,51 @@ class TravelAgentOrchestratorTest {
     }
 
     /**
+     * 验证完成态会话中的后续细化请求会复用上一轮旅行意图。
+     */
+    @Test
+    void shouldDetailPreviousPlanByCompletedSession() {
+        TravelAgentOrchestrator orchestrator = buildOrchestrator();
+
+        TravelPlanResponse firstResponse = orchestrator.plan(new TravelPlanRequest(
+                "五一从西安出发去杭州玩3天，两个人，预算3000，不想太累",
+                "completed-session"
+        ));
+
+        TravelPlanResponse secondResponse = orchestrator.plan(new TravelPlanRequest(
+                "没有详细的旅游计划啊",
+                firstResponse.sessionId()
+        ));
+
+        assertThat(secondResponse.needClarification()).isFalse();
+        assertThat(secondResponse.dialogIntent().name()).isEqualTo("DETAIL_PLAN");
+        assertThat(secondResponse.intent().departureCity()).isEqualTo("西安");
+        assertThat(secondResponse.intent().destinationPreferences()).contains("杭州");
+        assertThat(secondResponse.recommendedPlan().dailyPlans().get(0).morning()).contains("08:30", "需二次确认");
+    }
+
+    /**
+     * 验证局部调整类请求会被识别为调整计划。
+     */
+    @Test
+    void shouldRecognizeAdjustPlanForFollowUpChange() {
+        TravelAgentOrchestrator orchestrator = buildOrchestrator();
+        TravelPlanResponse firstResponse = orchestrator.plan(new TravelPlanRequest(
+                "五一从西安出发去杭州玩3天，两个人，预算3000，不想太累",
+                "adjust-session"
+        ));
+
+        TravelPlanResponse secondResponse = orchestrator.plan(new TravelPlanRequest(
+                "第二天轻松一点",
+                firstResponse.sessionId()
+        ));
+
+        assertThat(secondResponse.dialogIntent().name()).isEqualTo("ADJUST_PLAN");
+        assertThat(secondResponse.intent().days()).isEqualTo(3);
+        assertThat(secondResponse.contextualSuggestions()).isNotEmpty();
+    }
+
+    /**
      * 构造测试用编排器。
      *
      * @return 注入测试依赖后的编排器
@@ -107,6 +156,7 @@ class TravelAgentOrchestratorTest {
     private TravelAgentOrchestrator buildOrchestrator() {
         TravelAgentOrchestrator orchestrator = new TravelAgentOrchestrator();
         ReflectionTestUtils.setField(orchestrator, "travelIntentParser", travelIntentParser());
+        ReflectionTestUtils.setField(orchestrator, "travelDialogIntentRecognizer", new TravelDialogIntentRecognizer());
         ReflectionTestUtils.setField(orchestrator, "missingInfoChecker", new MissingInfoChecker());
         ReflectionTestUtils.setField(orchestrator, "travelTaskPlanner", new TravelTaskPlanner());
         ReflectionTestUtils.setField(orchestrator, "toolExecutor", toolExecutor());
@@ -114,8 +164,10 @@ class TravelAgentOrchestratorTest {
         ReflectionTestUtils.setField(orchestrator, "candidatePlanGenerator", new CandidatePlanGenerator());
         ReflectionTestUtils.setField(orchestrator, "travelScorer", new TravelScorer());
         ReflectionTestUtils.setField(orchestrator, "itineraryPlanner", new ItineraryPlanner());
+        ReflectionTestUtils.setField(orchestrator, "travelPlanLocalAdjuster", new TravelPlanLocalAdjuster());
         ReflectionTestUtils.setField(orchestrator, "reminderGenerator", new ReminderGenerator());
         ReflectionTestUtils.setField(orchestrator, "imageBriefGenerator", new ImageBriefGenerator());
+        ReflectionTestUtils.setField(orchestrator, "contextualSuggestionGenerator", new ContextualSuggestionGenerator());
         ReflectionTestUtils.setField(orchestrator, "travelSessionStore", travelSessionStore());
         return orchestrator;
     }
@@ -148,7 +200,7 @@ class TravelAgentOrchestratorTest {
                 entity.setLastQuestionsJson("[]");
             }
             return null;
-        }).when(mapper).markCompleted(any(), any(), any());
+        }).when(mapper).markCompleted(any(), any(), any(), any(), any());
 
         TravelAgentProperties properties = new TravelAgentProperties();
         TravelSessionStore store = new TravelSessionStore();
