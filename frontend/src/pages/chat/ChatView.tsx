@@ -11,6 +11,7 @@ import { ItineraryShareModal } from '../../features/travel-planning/components/I
 
 export function ChatView({ history, onSend }: { history: ChatMessage[], onSend: (text: string) => void }) {
   const [inputVal, setInputVal] = useState('');
+  const [viewMode, setViewMode] = useState<'itinerary' | 'dialog'>('itinerary');
   const [routeMapData, setRouteMapData] = useState<Itinerary | null>(null);
   const [itineraryShareData, setItineraryShareData] = useState<Itinerary | null>(null);
   const endOfMessagesRef = useRef<HTMLDivElement>(null);
@@ -37,6 +38,28 @@ export function ChatView({ history, onSend }: { history: ChatMessage[], onSend: 
   return (
     <>
       <div className="flex-1 overflow-y-auto px-4 py-6 space-y-6 min-h-0 bg-white">
+        <div className="sticky top-0 z-20 -mx-4 -mt-6 bg-white/95 px-4 py-3 backdrop-blur-sm border-b border-gray-100">
+          <div className="grid grid-cols-2 rounded-xl bg-gray-100 p-1 text-[13px] font-bold text-gray-500">
+            <button
+              type="button"
+              onClick={() => setViewMode('itinerary')}
+              className={`rounded-lg px-3 py-2 transition-all ${
+                viewMode === 'itinerary' ? 'bg-white text-blue-600 shadow-sm' : 'hover:text-gray-700'
+              }`}
+            >
+              行程视图
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('dialog')}
+              className={`rounded-lg px-3 py-2 transition-all ${
+                viewMode === 'dialog' ? 'bg-white text-blue-600 shadow-sm' : 'hover:text-gray-700'
+              }`}
+            >
+              对话视图
+            </button>
+          </div>
+        </div>
         {history.map((msg) => (
           <div key={msg.id} className="flex w-full flex-col">
             {msg.role === 'user' ? (
@@ -69,10 +92,10 @@ export function ChatView({ history, onSend }: { history: ChatMessage[], onSend: 
                     <>
                       {msg.text && (
                         <div className="prose prose-sm w-full max-w-none text-gray-800 prose-p:leading-relaxed break-words">
-                          <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.text}</ReactMarkdown>
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>{viewMode === 'dialog' ? msg.itinerary?.plainMarkdown || msg.text : msg.text}</ReactMarkdown>
                         </div>
                       )}
-                      {msg.itinerary && (
+                      {viewMode === 'itinerary' && msg.itinerary && (
                         <div className="mt-5 mb-2 flex flex-col gap-3">
                           <InteractiveItinerary itinerary={msg.itinerary} />
                           <div className="flex flex-row items-center justify-end gap-2 mt-2 px-1">

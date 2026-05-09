@@ -6,7 +6,7 @@ import { ChatView } from '../pages/chat/ChatView';
 import { SessionSidebar } from '../features/chat-session/components/SessionSidebar';
 import { SessionSearchModal } from '../features/chat-session/components/SessionSearchModal';
 import { SettingsModal } from '../features/user-preferences/components/SettingsModal';
-import { TravelPreferences, ChatMessage, ChatSession, UserPreferences } from '../shared/types/travel';
+import { TravelPreferences, ChatMessage, ChatSession, UserPreferences, Itinerary, Activity, DayPlan } from '../shared/types/travel';
 import { generateItinerary } from '../features/travel-planning/api/travelPlanningApi';
 
 const MOCK_SESSIONS: ChatSession[] = [
@@ -238,6 +238,7 @@ ${prefs.additionalNotes ? '【本次特别说明】：' + prefs.additionalNotes 
       if (!updatedSession) return prev;
       
       const newHistory = updatedSession.history.slice(0, -1); 
+      const previousItinerary = latestItineraryBeforeLoading(updatedSession.history);
 
       generateItinerary(text, newHistory, {
         sessionId: currentSessionId,
@@ -248,6 +249,11 @@ ${prefs.additionalNotes ? '【本次特别说明】：' + prefs.additionalNotes 
         }
       })
       .then(result => {
+        const followUpMarkdown = buildFollowUpMarkdown(text, previousItinerary, result);
+        const resultWithMarkdown = {
+          ...result,
+          plainMarkdown: followUpMarkdown,
+        };
         setSessions(currentSessions => currentSessions.map(s => {
           if (s.id === currentSessionId) {
             return {
@@ -255,7 +261,7 @@ ${prefs.additionalNotes ? '【本次特别说明】：' + prefs.additionalNotes 
               title: s.title,
               history: s.history.map(m => 
                 m.id === loadingMsg.id 
-                ? { ...m, isLoading: false, text: result.assistantReply || '已为您更新行程：', itinerary: result }
+                ? { ...m, isLoading: false, text: followUpMarkdown, itinerary: resultWithMarkdown }
                 : m
               )
             };
@@ -382,4 +388,105 @@ ${prefs.additionalNotes ? '【本次特别说明】：' + prefs.additionalNotes 
       </AnimatePresence>
     </div>
   );
+}
+
+function latestItineraryBeforeLoading(history: ChatMessage[]): Itinerary | null {
+  return history
+    .slice()
+    .reverse()
+    .find(message => message.role === 'assistant' && !message.isLoading && message.itinerary)
+    ?.itinerary || null;
+}
+
+function buildFollowUpMarkdown(message: string, previous: Itinerary | null, current: Itinerary): string {
+  if (!previous || previous.days.length === 0 || current.days.length === 0) {
+    return [
+      '### 已根据你的补充更新',
+      '',
+      `本轮补充：${message}`,
+      '',
+      '主要变化：',
+      '- 已根据你的补充更新行程，重点请查看下方变化后的安排。',
+      '',
+      confirmSection(current.tips),
+    ].filter(Boolean).join('\n');
+  }
+
+  const changes = collectItineraryChanges(previous, current);
+  return [
+    '### 已根据你的补充更新',
+    '',
+    `本轮补充：${message}`,
+    '',
+    '主要变化：',
+    ...(changes.length > 0 ? changes : ['- 已更新行程细节，重点请查看下方变化后的安排。']),
+    '',
+    confirmSection(current.tips),
+  ].filter(Boolean).join('\n');
+}
+
+function collectItineraryChanges(previous: Itinerary, current: Itinerary): string[] {
+  const changes: string[] = [];
+  const previousDays = new Map(previous.days.map(day => [day.dayNumber, day]));
+
+  for (const day of current.days) {
+    const oldDay = previousDays.get(day.dayNumber);
+    if (!oldDay) {
+      changes.push(`- 新增第${day.dayNumber}天：${day.theme}`);
+      continue;
+    }
+    if (oldDay.theme !== day.theme) {
+      changes.push(`- 第${day.dayNumber}天主题调整为：${day.theme}`);
+    }
+    changes.push(...changedActivities(oldDay, day));
+    if (changes.length >= 6) break;
+  }
+
+  return changes.slice(0, 6);
+}
+
+function changedActivities(previous: DayPlan, current: DayPlan): string[] {
+  const changes: string[] = [];
+  const periodNames = ['上午', '下午', '晚上'];
+  const length = Math.max(previous.activities.length, current.activities.length);
+
+  for (let index = 0; index < length; index += 1) {
+    const oldActivity = previous.activities[index];
+    const newActivity = current.activities[index];
+    if (!newActivity) continue;
+    if (!oldActivity || activityKey(oldActivity) !== activityKey(newActivity)) {
+      changes.push(`- 第${current.dayNumber}天${periodNames[index] || newActivity.time}调整为：${activitySummary(newActivity)}`);
+    }
+  }
+
+  return changes;
+}
+
+function activityKey(activity: Activity): string {
+  return [
+    activity.time,
+    activity.location,
+    activity.description,
+    activity.duration,
+    activity.transportationToNext,
+  ].join('|');
+}
+
+function activitySummary(activity: Activity): string {
+  const transport = activity.transportationToNext ? `，交通：${activity.transportationToNext}` : '';
+  return `${activity.time} ${activity.location}，${activity.description}，耗时：${activity.duration}${transport}`;
+}
+
+function confirmSection(tips: string[]): string {
+  const confirms = tips
+    .filter(tip => containsAny(tip, '二次确认', '确认', '票务', '交通', '酒店', '预约'))
+    .slice(0, 3);
+  if (confirms.length === 0) {
+    return '仍需确认：出发前请再次核对交通、酒店和景点预约信息。';
+  }
+  return ['仍需确认：', ...confirms.map(tip => `- ${tip}`)].join('\n');
+}
+
+function containsAny(value: string, ...keywords: string[]): boolean {
+  return keywords.some(keyword => value.includes(keyword));
 }

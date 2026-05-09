@@ -42,6 +42,8 @@ export interface Itinerary {
   days: DayPlan[];
   tips: string[];
   assistantReply?: string;
+  plainMarkdown?: string;
+  dialogIntent?: string | null;
   contextualSuggestions?: string[];
   routeLine?: string[];
   dayCards?: DayCard[];
