@@ -40,7 +40,7 @@ public class TravelPlanLocalAdjuster {
             return generatedPlan;
         }
         if (dialogIntent == TravelDialogIntent.DETAIL_PLAN) {
-            return previousPlan;
+            return detailPlan(previousPlan);
         }
         if (dialogIntent != TravelDialogIntent.ADJUST_PLAN && dialogIntent != TravelDialogIntent.ADD_CONSTRAINT) {
             return generatedPlan;
@@ -60,6 +60,62 @@ public class TravelPlanLocalAdjuster {
             return adjustDay(previousPlan, targetDay, normalizedMessage);
         }
         return appendTodo(previousPlan, "已记录新的局部调整诉求，建议二次确认后再替换对应行程项。");
+    }
+
+    /**
+     * 细化上一轮完整旅行计划。
+     *
+     * @param plan 上一轮计划
+     * @return 细化后的计划
+     */
+    private TravelPlan detailPlan(TravelPlan plan) {
+        List<DailyPlan> detailedPlans = plan.dailyPlans().stream()
+                .map(this::detailDailyPlan)
+                .toList();
+        return copyPlan(
+                plan,
+                detailedPlans,
+                plan.transportSuggestions(),
+                plan.hotelSuggestions(),
+                append(plan.todoList(), "已将上一轮行程细化为可执行时间段，具体交通、门票和营业时间仍需二次确认。")
+        );
+    }
+
+    /**
+     * 细化单日行程。
+     *
+     * @param dailyPlan 上一轮每日计划
+     * @return 细化后的每日计划
+     */
+    private DailyPlan detailDailyPlan(DailyPlan dailyPlan) {
+        List<String> notes = append(dailyPlan.notes(), "本日已补充时间段、交通方式、预计耗时和二次确认提示。");
+        return new DailyPlan(
+                dailyPlan.day(),
+                dailyPlan.city(),
+                detailSegment("上午", "09:00-11:30", dailyPlan.city(), dailyPlan.morning()),
+                detailSegment("下午", "14:00-17:00", dailyPlan.city(), dailyPlan.afternoon()),
+                detailSegment("晚上", "18:30-20:30", dailyPlan.city(), dailyPlan.evening()),
+                dailyPlan.fatigueLevel(),
+                notes
+        );
+    }
+
+    /**
+     * 细化时间段描述。
+     *
+     * @param label 时间段
+     * @param timeRange 默认时间范围
+     * @param city 城市
+     * @param original 原始安排
+     * @return 细化后的时间段安排
+     */
+    private String detailSegment(String label, String timeRange, String city, String original) {
+        String target = hasText(original) ? original : city + label + "候选活动";
+        if (target.contains("预计") && target.contains("二次确认") && target.matches(".*\\d{1,2}:\\d{2}.*")) {
+            return target;
+        }
+        return timeRange + " " + target + "；建议地铁/打车或步行组合前往，预计" + duration(label)
+                + "；门票、营业时间、排队和路况需二次确认。";
     }
 
     /**
@@ -281,6 +337,26 @@ public class TravelPlanLocalAdjuster {
         List<String> result = new ArrayList<>(values == null ? List.of() : values);
         result.add(value);
         return result;
+    }
+
+    /**
+     * 判断文本是否包含有效内容。
+     *
+     * @param value 待判断文本
+     * @return 包含有效内容时返回 true
+     */
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
+    }
+
+    /**
+     * 获取时间段预计耗时。
+     *
+     * @param label 时间段
+     * @return 预计耗时文本
+     */
+    private String duration(String label) {
+        return "晚上".equals(label) ? "2小时" : "2.5小时";
     }
 
     /**

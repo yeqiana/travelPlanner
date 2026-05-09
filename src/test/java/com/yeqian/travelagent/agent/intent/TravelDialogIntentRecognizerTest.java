@@ -22,6 +22,8 @@ class TravelDialogIntentRecognizerTest {
     @Test
     void shouldRecognizeDetailPlan() {
         assertThat(recognizer.recognize("没有详细的旅游计划啊", null)).isEqualTo(TravelDialogIntent.DETAIL_PLAN);
+        assertThat(recognizer.recognize("具体一点", null)).isEqualTo(TravelDialogIntent.DETAIL_PLAN);
+        assertThat(recognizer.recognize("太笼统了", null)).isEqualTo(TravelDialogIntent.DETAIL_PLAN);
     }
 
     /**

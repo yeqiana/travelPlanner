@@ -24,6 +24,24 @@ class TravelPlanLocalAdjusterTest {
     private final TravelPlanLocalAdjuster adjuster = new TravelPlanLocalAdjuster();
 
     /**
+     * 验证细化计划会基于上一轮计划补充时间、交通、耗时和二次确认提示。
+     */
+    @Test
+    void shouldDetailPreviousPlan() {
+        TravelPlan adjustedPlan = adjuster.adjust(
+                TravelDialogIntent.DETAIL_PLAN,
+                "没有详细的旅游计划啊",
+                context(previousPlan()),
+                generatedPlan()
+        );
+
+        assertThat(adjustedPlan.dailyPlans().get(0).morning()).contains("09:00-11:30", "预计2.5小时", "二次确认");
+        assertThat(adjustedPlan.dailyPlans().get(0).afternoon()).contains("14:00-17:00", "地铁/打车");
+        assertThat(adjustedPlan.dailyPlans().get(0).evening()).contains("18:30-20:30", "预计2小时");
+        assertThat(adjustedPlan.todoList()).anyMatch(value -> value.contains("细化为可执行时间段"));
+    }
+
+    /**
      * 验证指定天调整只影响目标天，不重写其他天。
      */
     @Test
