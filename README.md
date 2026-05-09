@@ -19,11 +19,15 @@ $env:JAVA_HOME="D:\soft\jdk17.0.18"
 $env:SPRING_DATASOURCE_URL="jdbc:mysql://127.0.0.1:3306/travel_planner_dev?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai"
 $env:SPRING_DATASOURCE_USERNAME="your_username"
 $env:SPRING_DATASOURCE_PASSWORD="your_password"
-$env:DASHSCOPE_API_KEY="your_model_api_key"
+$env:DEEPSEEK_API_KEY="your_deepseek_api_key"
+$env:DEEPSEEK_BASE_URL="https://api.deepseek.com"
+$env:DEEPSEEK_CHAT_MODEL="deepseek-v4-flash"
 $env:SEARCH_API_KEY="your_tavily_key"
 $env:WEATHER_API_KEY="your_openweathermap_key"
 $env:AMAP_API_KEY="your_amap_key"
 ```
+
+如果使用 IntelliJ IDEA 启动，需要在 Run Configuration 的 `Environment variables` 中加入 `DEEPSEEK_API_KEY`，PowerShell 当前窗口里的临时环境变量不会自动传给已经打开的 IDE。
 
 模型 key 未配置或调用失败时，旅行需求解析会走规则兜底；`/api/ai/chat` 会返回明确失败信息。
 

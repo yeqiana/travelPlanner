@@ -74,8 +74,8 @@ public class TravelAgentProperties {
      * <p>描述当前启用的模型供应商、模型名和温度参数。</p>
      */
     public static class Ai {
-        private String provider = "dashscope";
-        private String model = "qwen-plus";
+        private String provider = "deepseek";
+        private String model = "deepseek-v4-flash";
         private Double temperature = 0.4;
 
         /**

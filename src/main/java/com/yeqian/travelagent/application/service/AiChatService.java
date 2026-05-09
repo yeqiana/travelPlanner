@@ -29,7 +29,7 @@ public class AiChatService {
      */
     public String chat(String message) {
         if (!StringUtils.hasText(apiKey)) {
-            throw new IllegalStateException("未配置 Ark API Key，请设置环境变量 ARK_API_KEY");
+            throw new IllegalStateException("未配置 DeepSeek API Key，请设置环境变量 DEEPSEEK_API_KEY");
         }
 
         ChatModel chatModel = chatModelProvider.getIfAvailable();

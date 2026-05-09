@@ -37,9 +37,9 @@ travel-planner:
     # 是否启用 AI 行程生成能力。未接入模型服务时可关闭。
     enabled: false
     # 模型服务地址。生产环境建议通过环境变量覆盖。
-    base-url: http://localhost:11434
+    base-url: https://api.deepseek.com
     # 默认模型名称，请按实际接入模型调整。
-    model: qwen2.5
+    model: deepseek-v4-flash
 
 travel-agent:
   planning:
@@ -93,8 +93,8 @@ logging:
 travel-planner:
   ai:
     enabled: ${AI_ENABLED:false}
-    base-url: ${AI_BASE_URL:http://localhost:11434}
-    model: ${AI_MODEL:qwen2.5}
+    base-url: ${AI_BASE_URL:https://api.deepseek.com}
+    model: ${AI_MODEL:deepseek-v4-flash}
 
 travel-agent:
   planning:
@@ -109,8 +109,8 @@ DB_URL=jdbc:mysql://127.0.0.1:3306/travel_planner?useUnicode=true&characterEncod
 DB_USERNAME=travel_user
 DB_PASSWORD=change-me
 AI_ENABLED=false
-AI_BASE_URL=http://localhost:11434
-AI_MODEL=qwen2.5
+AI_BASE_URL=https://api.deepseek.com
+AI_MODEL=deepseek-v4-flash
 TRAVEL_SESSION_TTL_HOURS=24
 ```
 

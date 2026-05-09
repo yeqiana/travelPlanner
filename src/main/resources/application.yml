@@ -35,8 +35,8 @@ travel-planner:
     max-days: 30
   ai:
     enabled: false
-    base-url: ${TRAVEL_PLANNER_AI_BASE_URL:http://localhost:11434}
-    model: ${TRAVEL_PLANNER_AI_MODEL:qwen2.5}
+    base-url: ${TRAVEL_PLANNER_AI_BASE_URL:https://api.deepseek.com}
+    model: ${TRAVEL_PLANNER_AI_MODEL:deepseek-v4-flash}
 
 travel-agent:
   planning:

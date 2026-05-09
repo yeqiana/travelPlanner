@@ -21,13 +21,15 @@ $env:SPRING_DATASOURCE_PASSWORD="your_password"
 ## 可选配置
 
 ```powershell
-$env:DASHSCOPE_API_KEY="your_model_api_key"
-$env:DASHSCOPE_CHAT_MODEL="doubao-seed-2-0-pro-260215"
-$env:OPENAI_COMPATIBLE_BASE_URL="https://ark.cn-beijing.volces.com/api/v3"
+$env:DEEPSEEK_API_KEY="your_deepseek_api_key"
+$env:DEEPSEEK_BASE_URL="https://api.deepseek.com"
+$env:DEEPSEEK_CHAT_MODEL="deepseek-v4-flash"
 $env:SEARCH_API_KEY="your_tavily_key"
 $env:WEATHER_API_KEY="your_openweathermap_key"
 $env:AMAP_API_KEY="your_amap_key"
 ```
+
+如果使用 IntelliJ IDEA 启动，需要在 Run Configuration 的 `Environment variables` 中加入 `DEEPSEEK_API_KEY`，否则 IDE 进程拿不到 PowerShell 里临时设置的环境变量。
 
 模型、天气、搜索 key 不配置时，旅行规划主链路仍可运行：模型解析会走规则兜底，天气和搜索工具会走 mock 降级。
 
