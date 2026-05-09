@@ -19,10 +19,16 @@ export function HomeForm({ onGenerate }: { onGenerate: (prefs: TravelPreferences
   const [mustVisit, setMustVisit] = useState('');
   const [avoidPlaces, setAvoidPlaces] = useState('');
   const [notes, setNotes] = useState('');
+  const [submitError, setSubmitError] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!departureCity.trim() || !dateText.trim() || !destinations.trim() || days <= 0) return;
+    const missingFields = requiredMissingFields();
+    if (missingFields.length > 0) {
+      setSubmitError(`请先补充：${missingFields.join('、')}`);
+      return;
+    }
+    setSubmitError('');
     onGenerate({
       departureCity: departureCity.trim(),
       dateText: dateText.trim(),
@@ -47,6 +53,15 @@ export function HomeForm({ onGenerate }: { onGenerate: (prefs: TravelPreferences
   const paceOptions = ['轻松慢游', '适中节奏', '紧凑多玩'];
 
   const inputBgClass = "bg-[#f4f4f5] border border-transparent focus-within:border-blue-400 focus-within:bg-white focus-within:shadow-sm";
+
+  const requiredMissingFields = () => {
+    const fields: string[] = [];
+    if (!departureCity.trim()) fields.push('出发城市');
+    if (!dateText.trim()) fields.push('出发时间');
+    if (!destinations.trim()) fields.push('目的地');
+    if (days <= 0) fields.push('出行天数');
+    return fields;
+  };
 
   return (
     <motion.div
@@ -79,7 +94,7 @@ export function HomeForm({ onGenerate }: { onGenerate: (prefs: TravelPreferences
                 value={departureCity}
                 onChange={(e) => setDepartureCity(e.target.value)}
                 className="w-full pl-12 pr-4 py-4 bg-transparent outline-none font-semibold text-gray-900 text-[16px] placeholder:text-gray-400 placeholder:font-normal"
-                required
+                aria-required="true"
               />
             </div>
           </div>
@@ -95,7 +110,7 @@ export function HomeForm({ onGenerate }: { onGenerate: (prefs: TravelPreferences
                 value={dateText}
                 onChange={(e) => setDateText(e.target.value)}
                 className="w-full px-4 py-4 bg-transparent outline-none font-semibold text-gray-900 text-[16px] placeholder:text-gray-400 placeholder:font-normal"
-                required
+                aria-required="true"
               />
             </div>
           </div>
@@ -115,7 +130,7 @@ export function HomeForm({ onGenerate }: { onGenerate: (prefs: TravelPreferences
               value={destinations}
               onChange={(e) => setDestinations(e.target.value)}
               className="w-full pl-12 pr-4 py-4 bg-transparent outline-none font-semibold text-gray-900 text-[16px] placeholder:text-gray-400 placeholder:font-normal"
-              required
+              aria-required="true"
             />
           </div>
         </div>
@@ -305,10 +320,14 @@ export function HomeForm({ onGenerate }: { onGenerate: (prefs: TravelPreferences
         </div>
 
         <div className="pt-4">
+          {submitError && (
+            <div className="mb-3 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-[13px] font-bold leading-relaxed text-red-600">
+              {submitError}
+            </div>
+          )}
           <button
             type="submit"
-            disabled={!departureCity.trim() || !dateText.trim() || !destinations.trim()}
-            className="w-full bg-black text-white rounded-2xl py-4 font-bold text-lg hover:bg-gray-900 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg"
+            className="w-full bg-black text-white rounded-2xl py-4 font-bold text-lg hover:bg-gray-900 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-lg"
           >
             开始生成
           </button>
