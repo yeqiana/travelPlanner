@@ -35,9 +35,9 @@ class TravelPlanLocalAdjusterTest {
                 generatedPlan()
         );
 
-        assertThat(adjustedPlan.dailyPlans().get(0).morning()).contains("09:00 西湖", "预计2.5小时", "二次确认", "地铁/打车");
-        assertThat(adjustedPlan.dailyPlans().get(0).afternoon()).contains("14:00 灵隐寺", "地铁/打车", "预计2.5小时");
-        assertThat(adjustedPlan.dailyPlans().get(0).evening()).contains("18:00 湖滨晚餐", "预计2小时");
+        assertStandardSegment(adjustedPlan.dailyPlans().get(0).morning(), "09:00-11:30", "西湖");
+        assertStandardSegment(adjustedPlan.dailyPlans().get(0).afternoon(), "14:00-17:00", "灵隐寺");
+        assertStandardSegment(adjustedPlan.dailyPlans().get(0).evening(), "18:30-20:30", "湖滨晚餐");
         assertThat(adjustedPlan.todoList()).anyMatch(value -> value.contains("细化为可执行时间段"));
     }
 
@@ -53,12 +53,9 @@ class TravelPlanLocalAdjusterTest {
                 generatedPlan()
         );
 
-        assertThat(adjustedPlan.dailyPlans().get(0).morning())
-                .contains("09:00 西湖", "建议地铁/打车", "预计2.5小时", "二次确认");
-        assertThat(adjustedPlan.dailyPlans().get(0).afternoon())
-                .contains("14:00 灵隐寺", "建议地铁/打车", "预计2.5小时", "二次确认");
-        assertThat(adjustedPlan.dailyPlans().get(0).evening())
-                .contains("18:00 湖滨晚餐", "建议地铁/打车", "预计2小时", "二次确认");
+        assertStandardSegment(adjustedPlan.dailyPlans().get(0).morning(), "09:00-11:30", "西湖");
+        assertStandardSegment(adjustedPlan.dailyPlans().get(0).afternoon(), "14:00-17:00", "灵隐寺");
+        assertStandardSegment(adjustedPlan.dailyPlans().get(0).evening(), "18:30-20:30", "湖滨晚餐");
     }
 
     /**
@@ -75,8 +72,9 @@ class TravelPlanLocalAdjusterTest {
         );
 
         assertThat(adjustedPlan.dailyPlans().get(0).morning()).isEqualTo(previousPlan.dailyPlans().get(0).morning());
-        assertThat(adjustedPlan.dailyPlans().get(1).morning()).contains("近距离候选点", "预计1.5小时", "二次确认");
-        assertThat(adjustedPlan.dailyPlans().get(1).evening()).contains("不再安排远距离夜游", "二次确认");
+        assertStandardSegment(adjustedPlan.dailyPlans().get(1).morning(), "09:30-11:00", "近距离候选点");
+        assertStandardSegment(adjustedPlan.dailyPlans().get(1).evening(), "18:00-20:00", "就近餐厅");
+        assertThat(adjustedPlan.dailyPlans().get(1).evening()).contains("不再安排远距离夜游");
         assertThat(adjustedPlan.dailyPlans().get(1).fatigueLevel()).isEqualTo(FatigueLevel.LOW);
     }
 
@@ -92,7 +90,9 @@ class TravelPlanLocalAdjusterTest {
                 generatedPlan()
         );
 
-        assertThat(adjustedPlan.dailyPlans()).allSatisfy(dailyPlan -> assertThat(dailyPlan.evening()).contains("口碑餐厅"));
+        assertThat(adjustedPlan.dailyPlans()).allSatisfy(dailyPlan -> {
+            assertThat(dailyPlan.evening()).contains("地点：", "安排：", "交通：", "耗时：", "确认：", "口碑餐厅");
+        });
         assertThat(adjustedPlan.hotelSuggestions()).containsExactly("住西湖附近");
     }
 
@@ -169,5 +169,16 @@ class TravelPlanLocalAdjusterTest {
      */
     private TravelPlan generatedPlan() {
         return new TravelPlan("新计划", "不应优先使用", List.of(), List.of(), List.of(), List.of(), Map.of(), List.of(), List.of());
+    }
+
+    /**
+     * 断言时间段符合 P6 兼容增强格式。
+     *
+     * @param segment 时间段文本
+     * @param timeRange 预期时间范围
+     * @param placeKeyword 预期地点关键词
+     */
+    private void assertStandardSegment(String segment, String timeRange, String placeKeyword) {
+        assertThat(segment).contains(timeRange, "地点：", placeKeyword, "安排：", "交通：", "耗时：预计", "确认：", "二次确认");
     }
 }

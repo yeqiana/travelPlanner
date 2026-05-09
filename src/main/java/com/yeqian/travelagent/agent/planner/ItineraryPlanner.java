@@ -185,13 +185,23 @@ public class ItineraryPlanner {
     private String buildMorningPlan(String city, List<String> places, boolean firstDay) {
         String theme = cityTheme(city);
         if (firstDay) {
-            return "08:30-10:00 围绕“" + theme + "”从酒店或交通站前往" + places.get(0)
-                    + "，建议地铁/打车，预计30-60分钟，路况需二次确认；"
-                    + "10:00-12:00 游览" + places.get(0) + "，开放时间、预约和门票需二次确认。";
+            return formatSegment(
+                    "08:30-12:00",
+                    places.get(0),
+                    "围绕“" + theme + "”从酒店或交通站前往并游览" + places.get(0),
+                    "建议地铁/打车，路况需二次确认",
+                    "预计3.5小时",
+                    "路况、开放时间、预约和门票需二次确认"
+            );
         }
-        return "09:00-11:30 按“" + theme + "”主线前往" + places.get(0)
-                + "，建议地铁/打车，预计游览2.5小时，开放和预约需二次确认；"
-                + "11:30-12:30 在" + places.get(0) + "附近午餐，步行或短途打车衔接，餐厅排队情况需二次确认。";
+        return formatSegment(
+                "09:00-12:30",
+                places.get(0),
+                "按“" + theme + "”主线游览" + places.get(0) + "并在附近午餐",
+                "建议地铁/打车前往，午餐步行或短途打车衔接",
+                "预计3.5小时",
+                "开放、预约和餐厅排队情况需二次确认"
+        );
     }
 
     /**
@@ -205,13 +215,23 @@ public class ItineraryPlanner {
      */
     private String buildAfternoonPlan(String city, List<String> places, String attractionName, boolean lastDay) {
         if (lastDay) {
-            return "13:30-15:30 前往" + places.get(1) + "或" + attractionName
-                    + "做低强度补充游览，建议地铁/打车并预留行李寄存时间，预计2小时，开放状态需二次确认；"
-                    + "15:30-17:00 返回酒店/车站区域，预计30-60分钟，交通耗时需按当天路况二次确认。";
+            return formatSegment(
+                    "13:30-17:00",
+                    places.get(1),
+                    "前往" + places.get(1) + "或" + attractionName + "做低强度补充游览，并预留行李寄存和返程缓冲",
+                    "建议地铁/打车并提前规划返回酒店/车站路线",
+                    "预计3.5小时",
+                    "开放状态、行李寄存和当天路况需二次确认"
+            );
         }
-        return "13:30-16:30 游览" + places.get(1) + "和" + attractionName
-                + "，建议地铁/打车衔接，预计3小时，门票/预约需二次确认；"
-                + "16:30-17:30 前往" + places.get(2) + "周边休整，预计30分钟，营业状态需二次确认。";
+        return formatSegment(
+                "13:30-17:30",
+                places.get(1),
+                "游览" + places.get(1) + "和" + attractionName + "，结束后前往" + places.get(2) + "周边休整",
+                "建议地铁/打车衔接，避免连续远距离步行",
+                "预计4小时",
+                "门票、预约和营业状态需二次确认"
+        );
     }
 
     /**
@@ -225,11 +245,43 @@ public class ItineraryPlanner {
     private String buildEveningPlan(String city, List<String> places, boolean lastDay) {
         String restaurant = CITY_RESTAURANTS.getOrDefault(city, city + "当地特色餐厅");
         if (lastDay) {
-            return "18:00-19:00 在" + restaurant + "用餐或打包简餐，步行/短途打车优先，预计1小时，营业时间需二次确认；"
-                    + "19:00-20:30 前往返程交通点，预计30-90分钟，班次和进站时间需二次确认。";
+            return formatSegment(
+                    "18:00-20:30",
+                    restaurant,
+                    "用餐或打包简餐后前往返程交通点",
+                    "步行/短途打车优先，返程班次需提前核对",
+                    "预计2.5小时",
+                    "营业时间、班次和进站时间需二次确认"
+            );
         }
-        return "18:30-20:00 在" + restaurant + "晚餐，建议选择离当日最后景点近的位置，预计1.5小时，营业和排队情况需二次确认；"
-                + "20:00-21:00 步行体验" + places.get(2) + "夜间街区，预计1小时，体力不足可取消并直接返回酒店休息。";
+        return formatSegment(
+                "18:30-21:00",
+                restaurant,
+                "晚餐后步行体验" + places.get(2) + "夜间街区，体力不足可取消并直接返回酒店休息",
+                "优先选择离当日最后景点近的位置，步行或短途打车返回",
+                "预计2.5小时",
+                "营业、排队和夜间返程路况需二次确认"
+        );
+    }
+
+    /**
+     * 构造 P6 兼容增强格式的时间段文本。
+     *
+     * @param timeRange 时间范围
+     * @param place 地点
+     * @param arrangement 安排内容
+     * @param transport 交通建议
+     * @param duration 预计耗时
+     * @param confirm 二次确认提示
+     * @return 标准化时间段文本
+     */
+    private String formatSegment(String timeRange, String place, String arrangement, String transport, String duration, String confirm) {
+        return timeRange
+                + " 地点：" + place
+                + "；安排：" + arrangement
+                + "；交通：" + transport
+                + "；耗时：" + duration
+                + "；确认：" + confirm + "。";
     }
 
     /**

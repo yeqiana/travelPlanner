@@ -36,7 +36,7 @@ class ItineraryPlannerTest {
         TravelPlan plan = planner.generate(intent, List.of(scoredPlan), List.of());
 
         assertThat(plan.dailyPlans()).hasSize(4);
-        assertThat(plan.dailyPlans().get(0).morning()).contains("08:30", "10:00", "需二次确认");
+        assertThat(plan.dailyPlans().get(0).morning()).contains("08:30-12:00", "地点：", "安排：", "交通：", "耗时：", "确认：");
         assertThat(plan.risks()).isNotEmpty();
         assertThat(plan.budgetEstimate()).containsKeys("transport", "hotel", "total");
         assertThat(plan.transportSuggestions()).isNotEmpty();
@@ -138,8 +138,8 @@ class ItineraryPlannerTest {
      * @param place 预期地点或关键词
      */
     private void assertDetailedSegment(String segment, String place) {
-        assertThat(segment).contains(place, "预计", "二次确认");
-        assertThat(segment).matches(".*\\d{1,2}:\\d{2}.*");
+        assertThat(segment).contains(place, "地点：", "安排：", "交通：", "耗时：", "确认：", "预计", "二次确认");
+        assertThat(segment).matches("^\\d{1,2}:\\d{2}-\\d{1,2}:\\d{2} .*");
         assertThat(segment).containsAnyOf("地铁", "打车", "步行");
     }
 }

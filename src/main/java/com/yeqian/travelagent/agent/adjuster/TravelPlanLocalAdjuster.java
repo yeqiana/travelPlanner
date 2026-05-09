@@ -114,22 +114,16 @@ public class TravelPlanLocalAdjuster {
         if (hasScheduleQuality(target)) {
             return target;
         }
-        List<String> supplements = new ArrayList<>();
-        if (!hasClock(target)) {
-            supplements.add(0, timeRange + " " + target);
-        } else {
-            supplements.add(target);
-        }
-        if (!containsAny(target, "地铁", "打车", "步行", "公交", "自驾", "换乘")) {
-            supplements.add("建议地铁/打车或步行组合前往");
-        }
-        if (!target.contains("预计")) {
-            supplements.add("预计" + duration(label));
-        }
-        if (!target.contains("二次确认")) {
-            supplements.add("门票、营业时间、排队和路况需二次确认");
-        }
-        return String.join("；", supplements) + "。";
+        String place = extractPlace(target, city + label + "候选活动");
+        String arrangement = "基于上一轮安排补齐细节：" + stripLeadingTime(target);
+        return formatSegment(
+                timeRange,
+                place,
+                arrangement,
+                "建议地铁/打车或步行组合前往",
+                "预计" + duration(label),
+                "门票、营业时间、排队和路况需二次确认"
+        );
     }
 
     /**
@@ -187,9 +181,30 @@ public class TravelPlanLocalAdjuster {
         return new DailyPlan(
                 dailyPlan.day(),
                 dailyPlan.city(),
-                "09:30-11:00 保留" + dailyPlan.city() + "一处近距离候选点，优先选择地铁/打车直达，预计1.5小时，开放和预约需二次确认",
-                "14:00-16:00 安排一处室内或近距离候选点，减少连续步行，预计2小时，开放状态需二次确认",
-                "18:00-20:00 就近用餐和休息，不再安排远距离夜游，预计2小时，营业时间和返程路况需二次确认",
+                formatSegment(
+                        "09:30-11:00",
+                        dailyPlan.city() + "近距离候选点",
+                        "保留一处近距离候选点，降低强度并减少排队",
+                        "优先选择地铁/打车直达",
+                        "预计1.5小时",
+                        "开放和预约需二次确认"
+                ),
+                formatSegment(
+                        "14:00-16:00",
+                        dailyPlan.city() + "室内或近距离候选点",
+                        "安排一处室内或近距离候选点，减少连续步行",
+                        "优先短途打车或步行衔接",
+                        "预计2小时",
+                        "开放状态需二次确认"
+                ),
+                formatSegment(
+                        "18:00-20:00",
+                        dailyPlan.city() + "就近餐厅",
+                        "就近用餐和休息，不再安排远距离夜游",
+                        "步行/短途打车优先",
+                        "预计2小时",
+                        "营业时间和返程路况需二次确认"
+                ),
                 FatigueLevel.LOW,
                 notes
         );
@@ -205,7 +220,12 @@ public class TravelPlanLocalAdjuster {
         return hasClock(value)
                 && value.contains("预计")
                 && value.contains("二次确认")
-                && containsAny(value, "地铁", "打车", "步行", "公交", "自驾", "换乘");
+                && containsAny(value, "地铁", "打车", "步行", "公交", "自驾", "换乘")
+                && value.contains("地点：")
+                && value.contains("安排：")
+                && value.contains("交通：")
+                && value.contains("耗时：")
+                && value.contains("确认：");
     }
 
     /**
@@ -231,7 +251,14 @@ public class TravelPlanLocalAdjuster {
                         dailyPlan.city(),
                         dailyPlan.morning(),
                         dailyPlan.afternoon(),
-                        "18:00-20:00 换为" + dailyPlan.city() + "本地口碑餐厅或小吃街候选，优先选择离住宿/当日最后景点近的位置，需二次确认营业时间和排队情况",
+                        formatSegment(
+                                "18:00-20:00",
+                                dailyPlan.city() + "本地口碑餐厅或小吃街候选",
+                                "换为本地口碑餐厅或小吃街候选，优先选择离住宿/当日最后景点近的位置",
+                                "步行/短途打车优先",
+                                "预计2小时",
+                                "营业时间和排队情况需二次确认"
+                        ),
                         dailyPlan.fatigueLevel(),
                         append(dailyPlan.notes(), "餐饮已按本轮要求局部替换，未改动上午和下午主行程。")
                 ))
@@ -394,6 +421,59 @@ public class TravelPlanLocalAdjuster {
      */
     private String duration(String label) {
         return "晚上".equals(label) ? "2小时" : "2.5小时";
+    }
+
+    /**
+     * 构造 P6 兼容增强格式的时间段文本。
+     *
+     * @param timeRange 时间范围
+     * @param place 地点
+     * @param arrangement 安排内容
+     * @param transport 交通建议
+     * @param duration 预计耗时
+     * @param confirm 二次确认提示
+     * @return 标准化时间段文本
+     */
+    private String formatSegment(String timeRange, String place, String arrangement, String transport, String duration, String confirm) {
+        return timeRange
+                + " 地点：" + place
+                + "；安排：" + arrangement
+                + "；交通：" + transport
+                + "；耗时：" + duration
+                + "；确认：" + confirm + "。";
+    }
+
+    /**
+     * 从上一轮文本中提取地点。
+     *
+     * @param value 上一轮文本
+     * @param fallback 兜底地点
+     * @return 地点文本
+     */
+    private String extractPlace(String value, String fallback) {
+        String text = stripLeadingTime(value);
+        int end = text.indexOf('，');
+        if (end < 0) {
+            end = text.indexOf('；');
+        }
+        if (end < 0) {
+            end = text.indexOf('。');
+        }
+        String place = end > 0 ? text.substring(0, end) : text;
+        return hasText(place) ? place.trim() : fallback;
+    }
+
+    /**
+     * 移除文本开头的钟点时间。
+     *
+     * @param value 原始文本
+     * @return 移除时间后的文本
+     */
+    private String stripLeadingTime(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.replaceFirst("^\\s*\\d{1,2}:\\d{2}(?:\\s*-\\s*\\d{1,2}:\\d{2})?\\s*", "").trim();
     }
 
     /**

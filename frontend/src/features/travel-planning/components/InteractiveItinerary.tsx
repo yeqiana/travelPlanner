@@ -7,6 +7,10 @@ import { TravelPlanOverview } from './TravelPlanOverview';
 
 function formatTime(timeStr: string) {
   if (!timeStr) return '未知';
+  const rangeMatch = timeStr.match(/(\d{1,2})[：:](\d{2})\s*-\s*(\d{1,2})[：:](\d{2})/);
+  if (rangeMatch) {
+    return `${rangeMatch[1].padStart(2, '0')}:${rangeMatch[2]}-${rangeMatch[3].padStart(2, '0')}:${rangeMatch[4]}`;
+  }
   const match = timeStr.match(/(\d{1,2})[：:](\d{2})/);
   if (match) {
     return `${match[1].padStart(2, '0')}:${match[2]}`;

@@ -67,12 +67,33 @@ function adaptDailyPlan(day: BackendDailyPlan): DayPlan {
 
 function adaptActivity(time: string, city: string | undefined, description?: string): Activity | null {
   if (!description) return null;
+  const parsed = parseSegment(description);
+  return {
+    time: parsed.time || time,
+    location: parsed.location || city || '待确认',
+    description: parsed.description || description,
+    duration: parsed.duration || (time === '晚上' ? '晚上' : '半天'),
+    transportationToNext: parsed.transportationToNext,
+  };
+}
+
+function parseSegment(value: string): Partial<Activity> {
+  const normalized = value.trim();
+  const time = normalized.match(/^(\d{1,2}[：:]\d{2}\s*-\s*\d{1,2}[：:]\d{2})/)?.[1]
+    ?.replace(/：/g, ':')
+    .replace(/\s+/g, '');
   return {
     time,
-    location: city || '待确认',
-    description,
-    duration: time === '晚上' ? '晚上' : '半天',
+    location: fieldValue(normalized, '地点'),
+    description: fieldValue(normalized, '安排'),
+    transportationToNext: fieldValue(normalized, '交通'),
+    duration: fieldValue(normalized, '耗时'),
   };
+}
+
+function fieldValue(value: string, field: string): string | undefined {
+  const match = value.match(new RegExp(`${field}：([^；。]+)`));
+  return match?.[1]?.trim();
 }
 
 function clarificationQuestions(response: TravelPlanResponse): string[] {
