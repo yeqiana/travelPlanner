@@ -35,10 +35,30 @@ class TravelPlanLocalAdjusterTest {
                 generatedPlan()
         );
 
-        assertThat(adjustedPlan.dailyPlans().get(0).morning()).contains("09:00-11:30", "预计2.5小时", "二次确认");
-        assertThat(adjustedPlan.dailyPlans().get(0).afternoon()).contains("14:00-17:00", "地铁/打车");
-        assertThat(adjustedPlan.dailyPlans().get(0).evening()).contains("18:30-20:30", "预计2小时");
+        assertThat(adjustedPlan.dailyPlans().get(0).morning()).contains("09:00 西湖", "预计2.5小时", "二次确认", "地铁/打车");
+        assertThat(adjustedPlan.dailyPlans().get(0).afternoon()).contains("14:00 灵隐寺", "地铁/打车", "预计2.5小时");
+        assertThat(adjustedPlan.dailyPlans().get(0).evening()).contains("18:00 湖滨晚餐", "预计2小时");
         assertThat(adjustedPlan.todoList()).anyMatch(value -> value.contains("细化为可执行时间段"));
+    }
+
+    /**
+     * 验证原计划已有时间但缺少交通、耗时和确认提示时，细化逻辑仍会补齐缺失信息。
+     */
+    @Test
+    void shouldCompleteDetailHintsWhenOriginalAlreadyHasTime() {
+        TravelPlan adjustedPlan = adjuster.adjust(
+                TravelDialogIntent.DETAIL_PLAN,
+                "太笼统了，具体一点",
+                context(previousPlan()),
+                generatedPlan()
+        );
+
+        assertThat(adjustedPlan.dailyPlans().get(0).morning())
+                .contains("09:00 西湖", "建议地铁/打车", "预计2.5小时", "二次确认");
+        assertThat(adjustedPlan.dailyPlans().get(0).afternoon())
+                .contains("14:00 灵隐寺", "建议地铁/打车", "预计2.5小时", "二次确认");
+        assertThat(adjustedPlan.dailyPlans().get(0).evening())
+                .contains("18:00 湖滨晚餐", "建议地铁/打车", "预计2小时", "二次确认");
     }
 
     /**
@@ -55,7 +75,8 @@ class TravelPlanLocalAdjusterTest {
         );
 
         assertThat(adjustedPlan.dailyPlans().get(0).morning()).isEqualTo(previousPlan.dailyPlans().get(0).morning());
-        assertThat(adjustedPlan.dailyPlans().get(1).morning()).contains("低强度");
+        assertThat(adjustedPlan.dailyPlans().get(1).morning()).contains("近距离候选点", "预计1.5小时", "二次确认");
+        assertThat(adjustedPlan.dailyPlans().get(1).evening()).contains("不再安排远距离夜游", "二次确认");
         assertThat(adjustedPlan.dailyPlans().get(1).fatigueLevel()).isEqualTo(FatigueLevel.LOW);
     }
 

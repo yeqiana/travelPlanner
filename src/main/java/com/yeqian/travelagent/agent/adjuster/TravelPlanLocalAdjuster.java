@@ -111,11 +111,25 @@ public class TravelPlanLocalAdjuster {
      */
     private String detailSegment(String label, String timeRange, String city, String original) {
         String target = hasText(original) ? original : city + label + "候选活动";
-        if (target.contains("预计") && target.contains("二次确认") && target.matches(".*\\d{1,2}:\\d{2}.*")) {
+        if (hasScheduleQuality(target)) {
             return target;
         }
-        return timeRange + " " + target + "；建议地铁/打车或步行组合前往，预计" + duration(label)
-                + "；门票、营业时间、排队和路况需二次确认。";
+        List<String> supplements = new ArrayList<>();
+        if (!hasClock(target)) {
+            supplements.add(0, timeRange + " " + target);
+        } else {
+            supplements.add(target);
+        }
+        if (!containsAny(target, "地铁", "打车", "步行", "公交", "自驾", "换乘")) {
+            supplements.add("建议地铁/打车或步行组合前往");
+        }
+        if (!target.contains("预计")) {
+            supplements.add("预计" + duration(label));
+        }
+        if (!target.contains("二次确认")) {
+            supplements.add("门票、营业时间、排队和路况需二次确认");
+        }
+        return String.join("；", supplements) + "。";
     }
 
     /**
@@ -173,12 +187,35 @@ public class TravelPlanLocalAdjuster {
         return new DailyPlan(
                 dailyPlan.day(),
                 dailyPlan.city(),
-                "09:30-11:00 " + dailyPlan.city() + "低强度核心地点游览，优先选择地铁/打车直达，预计1.5小时",
-                "14:00-16:00 安排一处室内或近距离候选点，减少连续步行，预计2小时，需二次确认开放状态",
-                "18:00-20:00 就近用餐和休息，不再安排远距离夜游，预计2小时",
+                "09:30-11:00 保留" + dailyPlan.city() + "一处近距离候选点，优先选择地铁/打车直达，预计1.5小时，开放和预约需二次确认",
+                "14:00-16:00 安排一处室内或近距离候选点，减少连续步行，预计2小时，开放状态需二次确认",
+                "18:00-20:00 就近用餐和休息，不再安排远距离夜游，预计2小时，营业时间和返程路况需二次确认",
                 FatigueLevel.LOW,
                 notes
         );
+    }
+
+    /**
+     * 判断时间段描述是否已经达到可执行细化质量。
+     *
+     * @param value 时间段描述
+     * @return 已包含时间、交通、耗时和二次确认提示时返回 true
+     */
+    private boolean hasScheduleQuality(String value) {
+        return hasClock(value)
+                && value.contains("预计")
+                && value.contains("二次确认")
+                && containsAny(value, "地铁", "打车", "步行", "公交", "自驾", "换乘");
+    }
+
+    /**
+     * 判断文本是否包含钟点时间。
+     *
+     * @param value 待判断文本
+     * @return 包含钟点时间时返回 true
+     */
+    private boolean hasClock(String value) {
+        return value != null && value.matches(".*\\d{1,2}:\\d{2}.*");
     }
 
     /**

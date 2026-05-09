@@ -38,6 +38,13 @@ public class ItineraryPlanner {
             "宝鸡", "陈仓老街周边餐厅"
     );
 
+    private static final Map<String, String> CITY_DAY_THEME = Map.of(
+            "杭州", "西湖西线与城市烟火慢游",
+            "上海", "外滩城市景观与老城街区轻游",
+            "西安", "历史博物馆与城南夜景慢游",
+            "宝鸡", "人文景区与老街低强度游览"
+    );
+
     /**
      * 生成最终旅行计划。
      *
@@ -176,12 +183,15 @@ public class ItineraryPlanner {
      * @return 上午详细安排
      */
     private String buildMorningPlan(String city, List<String> places, boolean firstDay) {
+        String theme = cityTheme(city);
         if (firstDay) {
-            return "08:30-10:00 抵达或从酒店出发前往" + places.get(0) + "，建议地铁/打车，预计30-60分钟；"
-                    + "10:00-12:00 游览" + places.get(0) + "，开放和预约信息需二次确认。";
+            return "08:30-10:00 围绕“" + theme + "”从酒店或交通站前往" + places.get(0)
+                    + "，建议地铁/打车，预计30-60分钟，路况需二次确认；"
+                    + "10:00-12:00 游览" + places.get(0) + "，开放时间、预约和门票需二次确认。";
         }
-        return "09:00-11:30 前往" + places.get(0) + "，建议地铁/打车，预计游览2.5小时；"
-                + "11:30-12:30 在" + places.get(0) + "附近午餐，餐厅排队情况需二次确认。";
+        return "09:00-11:30 按“" + theme + "”主线前往" + places.get(0)
+                + "，建议地铁/打车，预计游览2.5小时，开放和预约需二次确认；"
+                + "11:30-12:30 在" + places.get(0) + "附近午餐，步行或短途打车衔接，餐厅排队情况需二次确认。";
     }
 
     /**
@@ -195,11 +205,13 @@ public class ItineraryPlanner {
      */
     private String buildAfternoonPlan(String city, List<String> places, String attractionName, boolean lastDay) {
         if (lastDay) {
-            return "13:30-15:30 前往" + places.get(1) + "或" + attractionName + "做低强度补充游览，建议预留行李寄存时间；"
-                    + "15:30-17:00 返回酒店/车站区域，交通耗时需按当天路况二次确认。";
+            return "13:30-15:30 前往" + places.get(1) + "或" + attractionName
+                    + "做低强度补充游览，建议地铁/打车并预留行李寄存时间，预计2小时，开放状态需二次确认；"
+                    + "15:30-17:00 返回酒店/车站区域，预计30-60分钟，交通耗时需按当天路况二次确认。";
         }
-        return "13:30-16:30 游览" + places.get(1) + "和" + attractionName + "，建议提前确认门票/预约，预计3小时；"
-                + "16:30-17:30 前往" + places.get(2) + "周边休整。";
+        return "13:30-16:30 游览" + places.get(1) + "和" + attractionName
+                + "，建议地铁/打车衔接，预计3小时，门票/预约需二次确认；"
+                + "16:30-17:30 前往" + places.get(2) + "周边休整，预计30分钟，营业状态需二次确认。";
     }
 
     /**
@@ -213,9 +225,11 @@ public class ItineraryPlanner {
     private String buildEveningPlan(String city, List<String> places, boolean lastDay) {
         String restaurant = CITY_RESTAURANTS.getOrDefault(city, city + "当地特色餐厅");
         if (lastDay) {
-            return "18:00-19:00 在" + restaurant + "用餐或打包简餐；19:00-20:30 前往返程交通点，班次和进站时间需二次确认。";
+            return "18:00-19:00 在" + restaurant + "用餐或打包简餐，步行/短途打车优先，预计1小时，营业时间需二次确认；"
+                    + "19:00-20:30 前往返程交通点，预计30-90分钟，班次和进站时间需二次确认。";
         }
-        return "18:30-20:00 在" + restaurant + "晚餐；20:00-21:00 步行体验" + places.get(2) + "夜间街区，随后返回酒店休息。";
+        return "18:30-20:00 在" + restaurant + "晚餐，建议选择离当日最后景点近的位置，预计1.5小时，营业和排队情况需二次确认；"
+                + "20:00-21:00 步行体验" + places.get(2) + "夜间街区，预计1小时，体力不足可取消并直接返回酒店休息。";
     }
 
     /**
@@ -227,9 +241,9 @@ public class ItineraryPlanner {
      */
     private List<String> dayPlaces(String city, String attractionName) {
         List<String> places = new ArrayList<>(CITY_ATTRACTIONS.getOrDefault(city, List.of(
-                city + "城市地标候选点",
-                city + "博物馆或公园候选点",
-                city + "特色街区候选点"
+                city + "城市地标候选点（需二次确认）",
+                city + "博物馆或公园候选点（需二次确认）",
+                city + "特色街区候选点（需二次确认）"
         )));
         if (!isBlank(attractionName) && !attractionName.equals(city) && !places.contains(attractionName)) {
             places.set(1, attractionName);
@@ -238,6 +252,16 @@ public class ItineraryPlanner {
             places.add(city + "待确认地点" + places.size());
         }
         return places;
+    }
+
+    /**
+     * 获取城市当日主线主题。
+     *
+     * @param city 当前城市
+     * @return 城市主线主题
+     */
+    private String cityTheme(String city) {
+        return CITY_DAY_THEME.getOrDefault(city, city + "低强度候选路线，具体地点需二次确认");
     }
 
     /**

@@ -94,6 +94,28 @@ class ItineraryPlannerTest {
         String dayText = plan.dailyPlans().get(0).morning() + plan.dailyPlans().get(0).afternoon() + plan.dailyPlans().get(0).evening();
 
         assertThat(dayText).contains("法门寺文化景区", "陈仓老街", "预计");
+        assertDetailedSegment(plan.dailyPlans().get(0).morning(), "法门寺文化景区");
+        assertDetailedSegment(plan.dailyPlans().get(0).afternoon(), "太白山游客中心");
+        assertDetailedSegment(plan.dailyPlans().get(0).evening(), "陈仓老街");
+        assertThat(dayText).doesNotContain("核心景点游览", "自由活动", "轻松收尾");
+    }
+
+    /**
+     * 验证未覆盖城市会生成候选点，并明确提示需要二次确认。
+     */
+    @Test
+    void shouldMarkFallbackPlacesNeedSecondConfirmForUnknownCities() {
+        TravelIntent intent = new TravelIntent("西安", "暑假", 1, 2, BigDecimal.valueOf(3000), List.of("青岛"), List.of("不想太累"), null, null, List.of());
+        TravelCandidatePlan candidate = new TravelCandidatePlan("青岛低疲劳精选", List.of("西安", "青岛", "西安"), "低疲劳");
+        TravelScore score = new TravelScore(86, 88, 84, 82, 86, 80, 78, "推荐");
+
+        TravelPlan plan = planner.generate(intent, List.of(new ScoredTravelPlan(candidate, score)), List.of());
+        String dayText = plan.dailyPlans().get(0).morning() + plan.dailyPlans().get(0).afternoon() + plan.dailyPlans().get(0).evening();
+
+        assertThat(dayText).contains("青岛城市地标候选点（需二次确认）", "青岛博物馆或公园候选点（需二次确认）");
+        assertDetailedSegment(plan.dailyPlans().get(0).morning(), "青岛城市地标候选点");
+        assertDetailedSegment(plan.dailyPlans().get(0).afternoon(), "青岛博物馆或公园候选点");
+        assertDetailedSegment(plan.dailyPlans().get(0).evening(), "预计");
         assertThat(dayText).doesNotContain("核心景点游览", "自由活动", "轻松收尾");
     }
 
@@ -107,5 +129,17 @@ class ItineraryPlannerTest {
      */
     private TravelEvidence evidence(EvidenceType evidenceType, String title, Map<String, Object> facts) {
         return new TravelEvidence(evidenceType, "杭州", title, "摘要", facts, 0.8, "TEST", null, OffsetDateTime.now());
+    }
+
+    /**
+     * 断言时间段已经包含 P6 要求的可执行信息。
+     *
+     * @param segment 时间段文本
+     * @param place 预期地点或关键词
+     */
+    private void assertDetailedSegment(String segment, String place) {
+        assertThat(segment).contains(place, "预计", "二次确认");
+        assertThat(segment).matches(".*\\d{1,2}:\\d{2}.*");
+        assertThat(segment).containsAnyOf("地铁", "打车", "步行");
     }
 }

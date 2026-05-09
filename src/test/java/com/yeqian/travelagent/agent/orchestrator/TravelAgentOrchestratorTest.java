@@ -128,6 +128,33 @@ class TravelAgentOrchestratorTest {
     }
 
     /**
+     * 验证完整链路中“太笼统/具体一点”会进入细化意图，并返回可执行行程。
+     */
+    @Test
+    void shouldReturnDetailedPlanForVagueFeedbackInSameSession() {
+        TravelAgentOrchestrator orchestrator = buildOrchestrator();
+
+        TravelPlanResponse firstResponse = orchestrator.plan(new TravelPlanRequest(
+                "五一从西安出发去杭州玩3天，两个人，预算3000，不想太累",
+                "detail-session"
+        ));
+
+        TravelPlanResponse secondResponse = orchestrator.plan(new TravelPlanRequest(
+                "太笼统了，具体一点",
+                firstResponse.sessionId()
+        ));
+
+        String firstDay = secondResponse.recommendedPlan().dailyPlans().get(0).morning()
+                + secondResponse.recommendedPlan().dailyPlans().get(0).afternoon()
+                + secondResponse.recommendedPlan().dailyPlans().get(0).evening();
+        assertThat(secondResponse.needClarification()).isFalse();
+        assertThat(secondResponse.dialogIntent().name()).isEqualTo("DETAIL_PLAN");
+        assertThat(firstDay).contains("预计", "二次确认");
+        assertThat(firstDay).containsAnyOf("地铁", "打车", "步行");
+        assertThat(firstDay).doesNotContain("核心景点游览", "自由活动", "轻松收尾");
+    }
+
+    /**
      * 验证局部调整类请求会被识别为调整计划。
      */
     @Test

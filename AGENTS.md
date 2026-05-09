@@ -28,6 +28,7 @@
 - OpenAPI / Swagger：`docs/yeqian/openapi-swagger-rules.md`
 - 配置示例：`docs/yeqian/config-example.md`
 - 本地运行：`docs/yeqian/travel-agent-local-run.md`
+- 当前进度：`docs/yeqian/travel-agent-stage-progress.md`
 - 多轮追问：`docs/yeqian/travel-agent-multiturn-clarification.md`
 - 接口文档：`docs/yeqian/api/旅游规划Agent接口文档.md`
 - 验收记录：`docs/yeqian/test/旅游规划AgentMVP验收记录.md`

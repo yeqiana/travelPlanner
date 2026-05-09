@@ -91,7 +91,7 @@ curl -X POST "http://localhost:8080/api/travel/plans" `
 - `docs/yeqian/backend-observability-rules.md`
 - `docs/yeqian/java-code-style-rules.md`
 - `docs/yeqian/openapi-swagger-rules.md`
-- `docs/yeqian/travel-agent-next-optimization-plan.md`
+- `docs/yeqian/travel-agent-stage-progress.md`
 - `docs/yeqian/travel-agent-local-run.md`
 - `docs/yeqian/travel-agent-multiturn-clarification.md`
 - `docs/yeqian/api/旅游规划Agent接口文档.md`

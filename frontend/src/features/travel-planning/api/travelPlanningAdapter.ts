@@ -92,7 +92,7 @@ function collectTips(response: TravelPlanResponse): string[] {
     ...(response.risks || []),
     ...(response.reminders || []).map(formatReminder).filter(Boolean),
   ];
-  return Array.from(new Set(tips));
+  return mergeRelatedTips(uniqueStrings(tips));
 }
 
 function collectRouteLine(response: TravelPlanResponse): string[] {
@@ -121,11 +121,11 @@ function collectDayCards(response: TravelPlanResponse): DayCard[] {
 
 function collectRiskTags(response: TravelPlanResponse): string[] {
   const plan = response.recommendedPlan;
-  return uniqueStrings([
+  return mergeSecondConfirmRisks(uniqueStrings([
     ...(response.imageBrief?.riskTags || []),
     ...(response.risks || []),
     ...(plan?.risks || []),
-  ]);
+  ]));
 }
 
 function collectReminderCards(response: TravelPlanResponse): ReminderCard[] {
@@ -186,6 +186,148 @@ function nonEmptyStrings(values: Array<string | null | undefined>): string[] {
 
 function uniqueStrings(values: Array<string | null | undefined>): string[] {
   return Array.from(new Set(nonEmptyStrings(values)));
+}
+
+function mergeRelatedTips(tips: string[]): string[] {
+  const groups = {
+    secondConfirm: [] as string[],
+    transport: [] as string[],
+    hotel: [] as string[],
+    attraction: [] as string[],
+    preparation: [] as string[],
+  };
+  const preserved: string[] = [];
+
+  for (const tip of tips) {
+    if (isRiskTip(tip)) {
+      preserved.push(tip);
+    } else if (isEvidenceSecondConfirmTip(tip)) {
+      groups.secondConfirm.push(secondConfirmLabel(tip));
+    } else if (isTransportTip(tip)) {
+      groups.transport.push(tip);
+    } else if (isHotelTip(tip)) {
+      groups.hotel.push(tip);
+    } else if (isAttractionTip(tip)) {
+      groups.attraction.push(tip);
+    } else if (isPreparationTip(tip)) {
+      groups.preparation.push(tip);
+    } else if (isGeneralSecondConfirmTip(tip)) {
+      groups.secondConfirm.push(secondConfirmLabel(tip));
+    } else {
+      preserved.push(tip);
+    }
+  }
+
+  return uniqueStrings([
+    secondConfirmTipSummary(groups.secondConfirm),
+    transportTipSummary(groups.transport),
+    hotelTipSummary(groups.hotel),
+    attractionTipSummary(groups.attraction),
+    preparationTipSummary(groups.preparation),
+    ...preserved,
+  ]);
+}
+
+function isRiskTip(tip: string): boolean {
+  return tip.includes('风险') && !tip.includes('二次确认');
+}
+
+function isGeneralSecondConfirmTip(tip: string): boolean {
+  return tip.includes('二次确认') || tip.includes('票务/门票确认');
+}
+
+function isEvidenceSecondConfirmTip(tip: string): boolean {
+  return /^.+?\s*(交通|天气|住宿|景点|路线)证据\s*信息需二次确认[。.]?$/.test(tip);
+}
+
+function isTransportTip(tip: string): boolean {
+  return containsAnyText(tip, '车票', '机票', '班次', '换乘', '路线/交通', '跨城交通', '大交通');
+}
+
+function isHotelTip(tip: string): boolean {
+  return containsAnyText(tip, '酒店', '住宿', '房态', '取消政策', '退改规则');
+}
+
+function isAttractionTip(tip: string): boolean {
+  return containsAnyText(tip, '景点', '预约', '开放时间', '入园规则', '门票');
+}
+
+function isPreparationTip(tip: string): boolean {
+  return containsAnyText(tip, '证件', '充电器', '雨具', '常用药', '出发前准备');
+}
+
+function containsAnyText(value: string, ...keywords: string[]): boolean {
+  return keywords.some(keyword => value.includes(keyword));
+}
+
+function transportTipSummary(tips: string[]): string | null {
+  if (tips.length === 0) return null;
+  return '票务交通：确认往返和跨城车票/机票，并核对路线、班次、换乘和退改规则。';
+}
+
+function hotelTipSummary(tips: string[]): string | null {
+  if (tips.length === 0) return null;
+  return '酒店住宿：确认酒店价格、位置、房态和取消政策。';
+}
+
+function attractionTipSummary(tips: string[]): string | null {
+  if (tips.length === 0) return null;
+  return '景点预约：确认热门景点预约、开放时间、门票和入园规则。';
+}
+
+function preparationTipSummary(tips: string[]): string | null {
+  if (tips.length === 0) return null;
+  return '行前准备：检查证件、充电器、雨具和常用药。';
+}
+
+function secondConfirmTipSummary(tips: string[]): string | null {
+  const labels = uniqueStrings(tips).filter(label => label.length > 0);
+  if (labels.length === 0) return null;
+  return secondConfirmSummary(labels);
+}
+
+function mergeSecondConfirmRisks(risks: string[]): string[] {
+  const confirmLabels: string[] = [];
+  const otherRisks: string[] = [];
+
+  for (const risk of risks) {
+    if (isSecondConfirmRisk(risk)) {
+      confirmLabels.push(secondConfirmLabel(risk));
+    } else {
+      otherRisks.push(risk);
+    }
+  }
+
+  const labels = uniqueStrings(confirmLabels).filter(label => label.length > 0);
+  if (labels.length === 0) return otherRisks;
+
+  return [secondConfirmSummary(labels), ...otherRisks];
+}
+
+function isSecondConfirmRisk(risk: string): boolean {
+  return risk.includes('二次确认');
+}
+
+function secondConfirmLabel(risk: string): string {
+  if (risk.includes('车票/酒店价格')) return '车票/酒店价格';
+  if (risk.includes('景点预约')) return '景点预约';
+
+  const evidenceMatch = risk.match(/^(.+?)\s*(交通|天气|住宿|景点|路线)证据\s*信息需二次确认[。.]?$/);
+  if (evidenceMatch) {
+    return `${evidenceMatch[1].trim()}${evidenceMatch[2]}信息`;
+  }
+
+  return risk
+    .replace(/[。.]$/u, '')
+    .replace(/信息需二次确认/u, '信息')
+    .replace(/需二次确认/u, '')
+    .trim();
+}
+
+function secondConfirmSummary(labels: string[]): string {
+  const visibleLabels = labels.slice(0, 6);
+  const suffix = labels.length > visibleLabels.length ? '等' : '';
+  return `出发前统一二次确认：${visibleLabels.join('、')}${suffix}。`;
 }
 
 function uniqueReminderCards(cards: ReminderCard[]): ReminderCard[] {
